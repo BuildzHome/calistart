@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CaliStart — Calisthenics for total beginners</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap');
+  :root {
+    --ink: #1C1B19;
+    --chalk: #F3EEE4;
+    --rust: #B8461F;
+    --gold: #E3A73A;
+    --concrete: #A9A398;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--chalk);
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .container { width: 100%; max-width: 420px; padding: 32px 24px 60px; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  h1, h2, h3 { font-family: 'Oswald', sans-serif; text-transform: uppercase; margin: 0; }
+  .eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 3px; color: var(--gold); margin-bottom: 18px; }
+  .hero-title { font-size: 48px; font-weight: 700; line-height: 1.05; margin-bottom: 16px; }
+  .hero-title .accent { color: var(--rust); }
+  .lede { color: var(--concrete); font-size: 15px; line-height: 1.6; margin-bottom: 36px; }
+  .track { position: relative; height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; margin: 0 0 40px; }
+  .track .mark { position: absolute; top: -5px; width: 2px; height: 13px; background: var(--concrete); opacity: 0.5; }
+  .track .mark.last { background: var(--gold); opacity: 1; }
+  .btn-primary { width: 100%; padding: 16px; border-radius: 10px; border: none; background: var(--rust); color: var(--chalk); font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; margin-top: 8px; }
+  .btn-primary:disabled { background: rgba(184,70,31,0.4); cursor: not-allowed; }
+  .btn-outline { width: 100%; padding: 14px; border-radius: 10px; border: 1.5px solid var(--gold); background: rgba(227,167,58,0.08); color: var(--gold); font-family: 'Oswald', sans-serif; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; margin-bottom: 24px; }
+  .btn-dashed { width: 100%; padding: 14px; border-radius: 10px; border: 1.5px dashed var(--concrete); background: transparent; color: var(--chalk); font-family: 'Inter', sans-serif; font-size: 14px; cursor: pointer; margin-bottom: 16px; }
+  .step-track { display: flex; gap: 6px; margin-bottom: 28px; }
+  .step-track .seg { height: 4px; flex: 1; border-radius: 2px; background: rgba(255,255,255,0.15); }
+  .step-track .seg.done { background: var(--gold); }
+  .choice { display: block; width: 100%; text-align: left; padding: 16px 18px; margin-bottom: 10px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.03); color: var(--chalk); font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; }
+  .choice.selected { border-color: var(--gold); background: rgba(227,167,58,0.12); }
+  .center { text-align: center; padding-top: 64px; }
+  .spinner { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.15); border-top-color: var(--gold); border-radius: 50%; margin: 0 auto 20px; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .plan-intro { font-size: 14.5px; line-height: 1.6; margin-bottom: 20px; }
+  .day-card { margin-bottom: 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px 16px; }
+  .day-label { font-family: 'Oswald', sans-serif; font-size: 13px; letter-spacing: 1px; color: var(--gold); margin-bottom: 10px; text-transform: uppercase; }
+  .exercise-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .exercise-icon { flex-shrink: 0; background: rgba(0,0,0,0.25); border-radius: 8px; padding: 4px; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; }
+  .exercise-name { font-size: 14px; font-weight: 500; }
+  .exercise-detail { font-size: 12.5px; color: var(--concrete); }
+  .safety-note { background: rgba(184,70,31,0.1); border: 1px solid var(--rust); border-radius: 10px; padding: 12px 14px; font-size: 13px; margin-bottom: 24px; }
+  .safety-note strong { color: var(--rust); }
+  .photo-result { background: rgba(227,167,58,0.08); border: 1px solid var(--gold); border-radius: 12px; padding: 16px 18px; font-size: 14px; line-height: 1.6; margin-bottom: 24px; white-space: pre-wrap; }
+  .error-text { color: var(--rust); font-size: 13px; margin-top: 8px; }
+  .badge-canvas { width: 100%; border-radius: 12px; margin-bottom: 10px; }
+  .divider { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; margin-top: 8px; text-align: center; }
+  .divider p { color: var(--concrete); font-size: 12.5px; margin-bottom: 12px; }
+  .section-title { font-size: 18px; margin-bottom: 10px; }
+  .section-lede { color: var(--concrete); font-size: 13px; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- LANDING -->
+  <div class="screen active center" id="screen-landing">
+    <div class="eyebrow">NO GYM · NO EQUIPMENT · NO EXCUSES</div>
+    <h1 class="hero-title">Start from<br><span class="accent">zero.</span></h1>
+    <p class="lede">A calisthenics coach built for total beginners — one that actually asks about your body before telling you what to do.</p>
+    <div class="track">
+      <div class="mark" style="left:15%"></div>
+      <div class="mark" style="left:40%"></div>
+      <div class="mark" style="left:68%"></div>
+      <div class="mark last" style="left:90%"></div>
+    </div>
+    <button class="btn-primary" onclick="goTo('intake1')">Build my plan</button>
+    <p style="color:var(--concrete);font-size:12px;margin-top:14px;">Free to try · takes 30 seconds</p>
+  </div>
+
+  <!-- INTAKE 1 -->
+  <div class="screen" id="screen-intake1">
+    <div class="step-track"><div class="seg done"></div><div class="seg"></div><div class="seg"></div></div>
+    <h2 style="font-size:24px;margin-bottom:20px;">What's the goal?</h2>
+    <div id="goal-choices"></div>
+    <button class="btn-primary" id="btn-intake1-next" disabled onclick="goTo('intake2')">Next</button>
+  </div>
+
+  <!-- INTAKE 2 -->
+  <div class="screen" id="screen-intake2">
+    <div class="step-track"><div class="seg done"></div><div class="seg done"></div><div class="seg"></div></div>
+    <h2 style="font-size:24px;margin-bottom:8px;">Anything I should know?</h2>
+    <p class="section-lede">This changes what I recommend — no wrong answer.</p>
+    <div id="limitation-choices"></div>
+    <button class="btn-primary" id="btn-intake2-next" disabled onclick="goTo('intake3')">Next</button>
+  </div>
+
+  <!-- INTAKE 3 -->
+  <div class="screen" id="screen-intake3">
+    <div class="step-track"><div class="seg done"></div><div class="seg done"></div><div class="seg done"></div></div>
+    <h2 style="font-size:24px;margin-bottom:20px;">What have you got?</h2>
+    <div id="equipment-choices"></div>
+    <div id="intake-error"></div>
+    <button class="btn-primary" id="btn-get-plan" disabled onclick="generatePlan()">Get my plan</button>
+  </div>
+
+  <!-- LOADING -->
+  <div class="screen center" id="screen-loading" style="padding-top:120px;">
+    <div class="spinner"></div>
+    <p style="color:var(--concrete);font-size:14px;">Building your plan…</p>
+  </div>
+
+  <!-- PLAN -->
+  <div class="screen" id="screen-plan">
+    <div class="eyebrow">YOUR 7-DAY START</div>
+    <p class="plan-intro" id="plan-intro"></p>
+    <div id="plan-days"></div>
+    <div class="safety-note"><strong>Safety note: </strong><span id="safety-tip"></span></div>
+
+    <h3 class="section-title">Check your form</h3>
+    <p class="section-lede">Upload a photo mid-exercise and get instant feedback.</p>
+    <input type="file" accept="image/*" id="photo-input" style="display:none" onchange="handlePhotoUpload(event)">
+    <button class="btn-dashed" id="btn-upload" onclick="document.getElementById('photo-input').click()">+ Upload a photo</button>
+    <div id="photo-result"></div>
+
+    <div id="badge-section"></div>
+
+    <div class="divider">
+      <p>Keep your plan updating as you train, plus unlimited form checks.</p>
+      <button class="btn-primary" onclick="alert('Stripe subscription link goes here')">Subscribe — £6.99/mo</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const GOLD = "#E3A73A", RUST = "#B8461F", CHALK = "#F3EEE4", CONCRETE = "#A9A398", INK = "#1C1B19";
+
+const GOALS = [
+  { id: "pullup", label: "Get my first pull-up" },
+  { id: "pushup", label: "Do a full clean push-up" },
+  { id: "handstand", label: "Hold a handstand" },
+  { id: "general", label: "Just get generally strong" },
+];
+const LIMITATIONS = [
+  { id: "wrists", label: "Thin wrists / weak grip" },
+  { id: "injury", label: "Old injury I'm working around" },
+  { id: "beginner", label: "Total beginner, nervous starting" },
+  { id: "none", label: "No limitations" },
+];
+const EQUIPMENT = [
+  { id: "none", label: "Nothing — just floor space" },
+  { id: "wall", label: "A wall or sturdy chair" },
+  { id: "bar", label: "I have access to a bar" },
+];
+
+const POSES = {
+  wallpushup: { limbs: [[30,55,50,35],[70,55,50,35],[30,55,15,70],[70,55,85,70]], torso:[50,35,50,55], head:[50,25,9] },
+  pushup: { limbs: [[25,55,15,40],[25,55,45,40],[25,60,10,72],[75,60,90,72]], torso:[25,55,75,58], head:[15,50,8] },
+  plank: { limbs: [[25,55,15,68],[25,55,45,42],[75,58,90,68],[75,58,58,42]], torso:[25,55,75,58], head:[15,52,8] },
+  squat: { limbs: [[35,50,20,30],[65,50,80,30],[40,55,35,80],[60,55,65,80]], torso:[50,35,50,55], head:[50,25,9] },
+  wallsit: { limbs: [[35,55,20,55],[65,55,80,55],[40,58,40,85],[60,58,60,85]], torso:[50,35,50,58], head:[50,25,9] },
+  deadhang: { limbs: [[42,20,25,45],[58,20,75,45],[45,55,38,85],[55,55,62,85]], torso:[50,20,50,55], head:[50,10,9] },
+  negativepullup: { limbs: [[42,25,25,50],[58,25,75,50],[45,55,40,80],[55,55,60,80]], torso:[50,25,50,55], head:[50,14,9] },
+  pullup: { limbs: [[42,20,32,35],[58,20,68,35],[45,50,38,80],[55,50,62,80]], torso:[50,20,50,50], head:[50,12,9] },
+  handstand: { limbs: [[42,80,25,55],[58,80,75,55],[45,45,38,15],[55,45,62,15]], torso:[50,45,50,80], head:[50,88,9] },
+  superman: { limbs: [[25,50,10,42],[25,50,10,58],[75,50,90,42],[75,50,90,58]], torso:[25,50,75,50], head:[15,50,8] },
+  bridge: { limbs: [[30,65,20,45],[70,65,80,45],[35,50,35,80],[65,50,65,80]], torso:[30,50,70,65], head:[30,58,8] },
+  jumpingjack: { limbs: [[50,35,25,15],[50,35,75,15],[50,55,25,85],[50,55,75,85]], torso:[50,35,50,55], head:[50,22,9] },
+};
+const POSE_KEYS = Object.keys(POSES).concat(["rest"]).join(", ");
+
+let state = { goal: null, limitation: null, equipment: null, plan: null };
+
+function goTo(name) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById("screen-" + name).classList.add("active");
+}
+
+function renderChoices(containerId, items, stateKey, nextBtnId) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = "";
+  items.forEach(item => {
+    const btn = document.createElement("button");
+    btn.className = "choice";
+    btn.textContent = item.label;
+    btn.onclick = () => {
+      state[stateKey] = item.id;
+      el.querySelectorAll(".choice").forEach(c => c.classList.remove("selected"));
+      btn.classList.add("selected");
+      if (nextBtnId) document.getElementById(nextBtnId).disabled = false;
+    };
+    el.appendChild(btn);
+  });
+}
+renderChoices("goal-choices", GOALS, "goal", "btn-intake1-next");
+renderChoices("limitation-choices", LIMITATIONS, "limitation", "btn-intake2-next");
+renderChoices("equipment-choices", EQUIPMENT, "equipment", "btn-get-plan");
+
+function stickFigureSVG(pose, size, color) {
+  if (pose === "rest" || !POSES[pose]) {
+    return `<div style="font-family:'IBM Plex Mono',monospace;font-size:${size*0.32}px;color:${color}">zzz</div>`;
+  }
+  const p = POSES[pose];
+  let svg = `<svg width="${size}" height="${size}" viewBox="0 0 100 100">`;
+  svg += `<circle cx="${p.head[0]}" cy="${p.head[1]}" r="${p.head[2]}" fill="${color}" />`;
+  svg += `<line x1="${p.torso[0]}" y1="${p.torso[1]}" x2="${p.torso[2]}" y2="${p.torso[3]}" stroke="${color}" stroke-width="7" stroke-linecap="round" />`;
+  p.limbs.forEach(l => {
+    svg += `<line x1="${l[0]}" y1="${l[1]}" x2="${l[2]}" y2="${l[3]}" stroke="${color}" stroke-width="6" stroke-linecap="round" />`;
+  });
+  svg += `</svg>`;
+  return svg;
+}
+
+async function generatePlan() {
+  document.getElementById("intake-error").innerHTML = "";
+  goTo("loading");
+  try {
+    const goalLabel = GOALS.find(g => g.id === state.goal).label;
+    const limitationLabel = LIMITATIONS.find(l => l.id === state.limitation).label;
+    const equipmentLabel = EQUIPMENT.find(e => e.id === state.equipment).label;
+
+    const res = await fetch("/api/plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ goalLabel, limitationLabel, equipmentLabel, poseKeys: POSE_KEYS }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "Unknown error");
+
+    state.plan = data;
+    renderPlan(data);
+    goTo("plan");
+  } catch (e) {
+    document.getElementById("intake-error").innerHTML = `<p class="error-text">Debug error: ${e.message}</p>`;
+    goTo("intake3");
+  }
+}
+
+function renderPlan(plan) {
+  document.getElementById("plan-intro").textContent = plan.intro;
+  document.getElementById("safety-tip").textContent = plan.safetyTip;
+  const daysEl = document.getElementById("plan-days");
+  daysEl.innerHTML = "";
+  plan.days.forEach(d => {
+    const card = document.createElement("div");
+    card.className = "day-card";
+    let html = `<div class="day-label">${d.day}</div>`;
+    d.exercises.forEach(ex => {
+      html += `<div class="exercise-row">
+        <div class="exercise-icon">${stickFigureSVG(ex.poseKey, 38, GOLD)}</div>
+        <div><div class="exercise-name">${ex.name}</div><div class="exercise-detail">${ex.detail}</div></div>
+      </div>`;
+    });
+    card.innerHTML = html;
+    daysEl.appendChild(card);
+  });
+
+  document.getElementById("badge-section").innerHTML =
+    `<button class="btn-outline" onclick="showBadge()">Get my stage badge</button>`;
+}
+
+async function handlePhotoUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const resultEl = document.getElementById("photo-result");
+  const btn = document.getElementById("btn-upload");
+  btn.textContent = "Analyzing…";
+  resultEl.innerHTML = "";
+  try {
+    const base64 = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result.split(",")[1]);
+      r.onerror = () => reject(new Error("Read failed"));
+      r.readAsDataURL(file);
+    });
+    const res = await fetch("/api/formcheck", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageBase64: base64, mediaType: file.type }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "Unknown error");
+    resultEl.innerHTML = `<div class="photo-result">${data.result}</div>`;
+  } catch (e) {
+    resultEl.innerHTML = `<div class="photo-result">Debug error: ${e.message}</div>`;
+  }
+  btn.textContent = "+ Upload a photo";
+}
+
+function showBadge() {
+  const section = document.getElementById("badge-section");
+  section.innerHTML = `<canvas id="badge-canvas" class="badge-canvas" width="560" height="320"></canvas>
+    <button class="btn-primary" onclick="downloadBadge()">Download badge</button>`;
+  const canvas = document.getElementById("badge-canvas");
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = INK; ctx.fillRect(0, 0, 560, 320);
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 4; ctx.strokeRect(14, 14, 532, 292);
+  ctx.fillStyle = GOLD; ctx.font = "600 20px Inter, sans-serif"; ctx.fillText("CALISTART", 40, 70);
+  ctx.fillStyle = CHALK; ctx.font = "700 54px Oswald, sans-serif"; ctx.fillText("STAGE 1", 40, 150);
+  ctx.fillStyle = RUST; ctx.font = "600 28px Oswald, sans-serif"; ctx.fillText("JOURNEY STARTED", 40, 195);
+  ctx.fillStyle = CONCRETE; ctx.font = "500 20px Inter, sans-serif";
+  const goalLabel = GOALS.find(g => g.id === state.goal)?.label || "Getting started";
+  ctx.fillText(`Goal: ${goalLabel}`, 40, 240);
+  ctx.font = "500 16px IBM Plex Mono, monospace";
+  ctx.fillText(new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }), 40, 280);
+}
+
+function downloadBadge() {
+  const canvas = document.getElementById("badge-canvas");
+  const url = canvas.toDataURL("image/png");
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "calistart-stage-1.png";
+  a.click();
+}
+</script>
+</body>
+</html>
