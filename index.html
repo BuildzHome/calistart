@@ -51,14 +51,16 @@
   .day-card { margin-bottom: 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px 16px; }
   .day-label { font-family: 'Oswald', sans-serif; font-size: 13px; letter-spacing: 1px; color: var(--gold); margin-bottom: 10px; text-transform: uppercase; }
   .exercise-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-  .exercise-icon { flex-shrink: 0; background: rgba(0,0,0,0.25); border-radius: 8px; padding: 4px; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; }
+  .exercise-icon { flex-shrink: 0; background: rgba(0,0,0,0.25); border-radius: 8px; padding: 4px; display: flex; align-items: center; justify-content: center; width: 60px; height: 60px; }
   .exercise-name { font-size: 14px; font-weight: 500; }
   .exercise-detail { font-size: 12.5px; color: var(--concrete); }
   .safety-note { background: rgba(184,70,31,0.1); border: 1px solid var(--rust); border-radius: 10px; padding: 12px 14px; font-size: 13px; margin-bottom: 24px; }
   .safety-note strong { color: var(--rust); }
   .photo-result { background: rgba(227,167,58,0.08); border: 1px solid var(--gold); border-radius: 12px; padding: 16px 18px; font-size: 14px; line-height: 1.6; margin-bottom: 24px; white-space: pre-wrap; }
   .error-text { color: var(--rust); font-size: 13px; margin-top: 8px; }
-  .badge-canvas { width: 100%; border-radius: 12px; margin-bottom: 10px; }
+  .camera-wrap { position: relative; width: 100%; border-radius: 12px; overflow: hidden; margin-bottom: 16px; background: #000; }
+  .camera-wrap video { width: 100%; display: block; }
+  .countdown-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.35); font-family: 'Oswald', sans-serif; font-size: 72px; font-weight: 700; color: var(--gold); }
   .divider { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; margin-top: 8px; text-align: center; }
   .divider p { color: var(--concrete); font-size: 12.5px; margin-bottom: 12px; }
   .section-title { font-size: 18px; margin-bottom: 10px; }
@@ -123,12 +125,14 @@
     <div class="safety-note"><strong>Safety note: </strong><span id="safety-tip"></span></div>
 
     <h3 class="section-title">Check your form</h3>
-    <p class="section-lede">Upload a photo mid-exercise and get instant feedback.</p>
-    <input type="file" accept="image/*" id="photo-input" style="display:none" onchange="handlePhotoUpload(event)">
-    <button class="btn-dashed" id="btn-upload" onclick="document.getElementById('photo-input').click()">+ Upload a photo</button>
+    <p class="section-lede">Upload a photo, or use the self-timer if you're training alone.</p>
+    <div id="photo-choice-buttons">
+      <button class="btn-dashed" onclick="document.getElementById('photo-input').click()">+ Upload a photo</button>
+      <input type="file" accept="image/*" id="photo-input" style="display:none" onchange="handleFileUpload(event)">
+      <button class="btn-dashed" onclick="showTimerOptions()">+ Take a self-timer photo</button>
+    </div>
+    <div id="camera-area"></div>
     <div id="photo-result"></div>
-
-    <div id="badge-section"></div>
 
     <div class="divider">
       <p>Keep your plan updating as you train, plus unlimited form checks.</p>
@@ -160,18 +164,18 @@ const EQUIPMENT = [
 ];
 
 const POSES = {
-  wallpushup: { limbs: [[30,55,50,35],[70,55,50,35],[30,55,15,70],[70,55,85,70]], torso:[50,35,50,55], head:[50,25,9] },
-  pushup: { limbs: [[25,55,15,40],[25,55,45,40],[25,60,10,72],[75,60,90,72]], torso:[25,55,75,58], head:[15,50,8] },
-  plank: { limbs: [[25,55,15,68],[25,55,45,42],[75,58,90,68],[75,58,58,42]], torso:[25,55,75,58], head:[15,52,8] },
-  squat: { limbs: [[35,50,20,30],[65,50,80,30],[40,55,35,80],[60,55,65,80]], torso:[50,35,50,55], head:[50,25,9] },
-  wallsit: { limbs: [[35,55,20,55],[65,55,80,55],[40,58,40,85],[60,58,60,85]], torso:[50,35,50,58], head:[50,25,9] },
-  deadhang: { limbs: [[42,20,25,45],[58,20,75,45],[45,55,38,85],[55,55,62,85]], torso:[50,20,50,55], head:[50,10,9] },
-  negativepullup: { limbs: [[42,25,25,50],[58,25,75,50],[45,55,40,80],[55,55,60,80]], torso:[50,25,50,55], head:[50,14,9] },
-  pullup: { limbs: [[42,20,32,35],[58,20,68,35],[45,50,38,80],[55,50,62,80]], torso:[50,20,50,50], head:[50,12,9] },
-  handstand: { limbs: [[42,80,25,55],[58,80,75,55],[45,45,38,15],[55,45,62,15]], torso:[50,45,50,80], head:[50,88,9] },
-  superman: { limbs: [[25,50,10,42],[25,50,10,58],[75,50,90,42],[75,50,90,58]], torso:[25,50,75,50], head:[15,50,8] },
-  bridge: { limbs: [[30,65,20,45],[70,65,80,45],[35,50,35,80],[65,50,65,80]], torso:[30,50,70,65], head:[30,58,8] },
-  jumpingjack: { limbs: [[50,35,25,15],[50,35,75,15],[50,55,25,85],[50,55,75,85]], torso:[50,35,50,55], head:[50,22,9] },
+  wallpushup: { limbs: [[38,50,60,35],[38,50,60,65],[38,60,25,80],[38,60,50,80]], torso:[38,32,38,60], head:[38,22,9], wallX: 62 },
+  pushup: { limbs: [[30,50,15,32],[30,50,15,68],[70,55,88,68],[70,55,88,32]], torso:[30,50,70,55], head:[18,50,9], groundY: 78 },
+  plank: { limbs: [[30,50,20,35],[30,50,20,65],[70,52,88,68],[70,52,88,36]], torso:[30,50,70,52], head:[18,50,9], groundY: 78 },
+  squat: { limbs: [[30,45,18,25],[70,45,82,25],[38,55,30,80],[62,55,70,80]], torso:[50,25,50,45], head:[50,15,9], groundY: 86 },
+  wallsit: { limbs: [[30,45,20,45],[70,45,80,45],[38,50,38,80],[62,50,62,80]], torso:[50,20,50,45], head:[50,10,9], groundY: 86, wallX: 22 },
+  deadhang: { limbs: [[40,18,22,45],[60,18,78,45],[44,52,36,85],[56,52,64,85]], torso:[50,18,50,52], head:[50,8,9], barY: 12 },
+  negativepullup: { limbs: [[38,22,20,45],[62,22,80,45],[44,55,36,85],[56,55,64,85]], torso:[50,22,50,55], head:[50,12,9], barY: 15 },
+  pullup: { limbs: [[42,15,30,28],[58,15,70,28],[44,48,36,80],[56,48,64,80]], torso:[50,15,50,48], head:[50,6,9], barY: 10 },
+  handstand: { limbs: [[38,85,22,60],[62,85,78,60],[44,42,36,10],[56,42,64,10]], torso:[50,42,50,85], head:[50,92,9], groundY: 96 },
+  superman: { limbs: [[30,50,12,38],[30,50,12,62],[70,50,90,38],[70,50,90,62]], torso:[30,50,70,50], head:[18,50,9], groundY: 62 },
+  bridge: { limbs: [[28,70,18,50],[72,70,82,50],[35,55,32,82],[65,55,68,82]], torso:[28,55,72,70], head:[28,62,8], groundY: 88 },
+  jumpingjack: { limbs: [[50,32,22,10],[50,32,78,10],[50,55,25,85],[50,55,75,85]], torso:[50,32,50,55], head:[50,20,9], groundY: 92 },
 };
 const POSE_KEYS = Object.keys(POSES).concat(["rest"]).join(", ");
 
@@ -204,14 +208,18 @@ renderChoices("equipment-choices", EQUIPMENT, "equipment", "btn-get-plan");
 
 function stickFigureSVG(pose, size, color) {
   if (pose === "rest" || !POSES[pose]) {
-    return `<div style="font-family:'IBM Plex Mono',monospace;font-size:${size*0.32}px;color:${color}">zzz</div>`;
+    return `<div style="font-family:'IBM Plex Mono',monospace;font-size:${size*0.28}px;color:${color}">zzz</div>`;
   }
   const p = POSES[pose];
+  const guide = "rgba(255,255,255,0.25)";
   let svg = `<svg width="${size}" height="${size}" viewBox="0 0 100 100">`;
+  if (p.groundY !== undefined) svg += `<line x1="5" y1="${p.groundY}" x2="95" y2="${p.groundY}" stroke="${guide}" stroke-width="3" stroke-linecap="round" />`;
+  if (p.barY !== undefined) svg += `<line x1="20" y1="${p.barY}" x2="80" y2="${p.barY}" stroke="${guide}" stroke-width="3" stroke-linecap="round" />`;
+  if (p.wallX !== undefined) svg += `<line x1="${p.wallX}" y1="5" x2="${p.wallX}" y2="95" stroke="${guide}" stroke-width="3" stroke-linecap="round" />`;
   svg += `<circle cx="${p.head[0]}" cy="${p.head[1]}" r="${p.head[2]}" fill="${color}" />`;
-  svg += `<line x1="${p.torso[0]}" y1="${p.torso[1]}" x2="${p.torso[2]}" y2="${p.torso[3]}" stroke="${color}" stroke-width="7" stroke-linecap="round" />`;
+  svg += `<line x1="${p.torso[0]}" y1="${p.torso[1]}" x2="${p.torso[2]}" y2="${p.torso[3]}" stroke="${color}" stroke-width="8" stroke-linecap="round" />`;
   p.limbs.forEach(l => {
-    svg += `<line x1="${l[0]}" y1="${l[1]}" x2="${l[2]}" y2="${l[3]}" stroke="${color}" stroke-width="6" stroke-linecap="round" />`;
+    svg += `<line x1="${l[0]}" y1="${l[1]}" x2="${l[2]}" y2="${l[3]}" stroke="${color}" stroke-width="7" stroke-linecap="round" />`;
   });
   svg += `</svg>`;
   return svg;
@@ -253,36 +261,108 @@ function renderPlan(plan) {
     let html = `<div class="day-label">${d.day}</div>`;
     d.exercises.forEach(ex => {
       html += `<div class="exercise-row">
-        <div class="exercise-icon">${stickFigureSVG(ex.poseKey, 38, GOLD)}</div>
+        <div class="exercise-icon">${stickFigureSVG(ex.poseKey, 56, GOLD)}</div>
         <div><div class="exercise-name">${ex.name}</div><div class="exercise-detail">${ex.detail}</div></div>
       </div>`;
     });
     card.innerHTML = html;
     daysEl.appendChild(card);
   });
-
-  document.getElementById("badge-section").innerHTML =
-    `<button class="btn-outline" onclick="showBadge()">Get my stage badge</button>`;
 }
 
-async function handlePhotoUpload(event) {
+let cameraStream = null;
+
+function showTimerOptions() {
+  const area = document.getElementById("camera-area");
+  document.getElementById("photo-result").innerHTML = "";
+  area.innerHTML = `
+    <p class="section-lede">Choose a countdown:</p>
+    <div id="timer-choices"></div>
+  `;
+  const durations = [3, 5, 10, 15];
+  const container = document.getElementById("timer-choices");
+  durations.forEach(sec => {
+    const btn = document.createElement("button");
+    btn.className = "choice";
+    btn.textContent = sec + " seconds";
+    btn.onclick = () => startCamera(sec);
+    container.appendChild(btn);
+  });
+}
+
+async function startCamera(duration) {
+  const area = document.getElementById("camera-area");
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    area.innerHTML = `
+      <div class="camera-wrap">
+        <video id="camera-video" autoplay playsinline muted></video>
+        <div class="countdown-overlay" id="countdown-overlay" style="display:none;"></div>
+      </div>
+      <button class="btn-primary" id="btn-start-timer">Start ${duration}s timer</button>
+    `;
+    const video = document.getElementById("camera-video");
+    video.srcObject = cameraStream;
+    document.getElementById("btn-start-timer").onclick = () => startCountdown(duration);
+  } catch (e) {
+    area.innerHTML = `<div class="photo-result">Couldn't access the camera: ${e.message}. Check your browser's camera permission for this site.</div>`;
+  }
+}
+
+function startCountdown(duration) {
+  const overlay = document.getElementById("countdown-overlay");
+  const startBtn = document.getElementById("btn-start-timer");
+  startBtn.style.display = "none";
+  overlay.style.display = "flex";
+  let count = duration;
+  overlay.textContent = count;
+  const interval = setInterval(() => {
+    count -= 1;
+    if (count > 0) {
+      overlay.textContent = count;
+    } else {
+      clearInterval(interval);
+      capturePhoto();
+    }
+  }, 1000);
+}
+
+async function capturePhoto() {
+  const video = document.getElementById("camera-video");
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video, 0, 0);
+  const base64 = canvas.toDataURL("image/jpeg").split(",")[1];
+
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  document.getElementById("camera-area").innerHTML = "";
+  analyzeImage(base64, "image/jpeg");
+}
+
+async function handleFileUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
+  const base64 = await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result.split(",")[1]);
+    r.onerror = () => reject(new Error("Read failed"));
+    r.readAsDataURL(file);
+  });
+  analyzeImage(base64, file.type);
+}
+
+async function analyzeImage(base64, mediaType) {
   const resultEl = document.getElementById("photo-result");
-  const btn = document.getElementById("btn-upload");
-  btn.textContent = "Analyzing…";
-  resultEl.innerHTML = "";
+  resultEl.innerHTML = `<div class="photo-result">Analyzing…</div>`;
   try {
-    const base64 = await new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result.split(",")[1]);
-      r.onerror = () => reject(new Error("Read failed"));
-      r.readAsDataURL(file);
-    });
     const res = await fetch("/api/formcheck", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageBase64: base64, mediaType: file.type }),
+      body: JSON.stringify({ imageBase64: base64, mediaType }),
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "Unknown error");
@@ -290,34 +370,6 @@ async function handlePhotoUpload(event) {
   } catch (e) {
     resultEl.innerHTML = `<div class="photo-result">Debug error: ${e.message}</div>`;
   }
-  btn.textContent = "+ Upload a photo";
-}
-
-function showBadge() {
-  const section = document.getElementById("badge-section");
-  section.innerHTML = `<canvas id="badge-canvas" class="badge-canvas" width="560" height="320"></canvas>
-    <button class="btn-primary" onclick="downloadBadge()">Download badge</button>`;
-  const canvas = document.getElementById("badge-canvas");
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = INK; ctx.fillRect(0, 0, 560, 320);
-  ctx.strokeStyle = GOLD; ctx.lineWidth = 4; ctx.strokeRect(14, 14, 532, 292);
-  ctx.fillStyle = GOLD; ctx.font = "600 20px Inter, sans-serif"; ctx.fillText("CALISTART", 40, 70);
-  ctx.fillStyle = CHALK; ctx.font = "700 54px Oswald, sans-serif"; ctx.fillText("STAGE 1", 40, 150);
-  ctx.fillStyle = RUST; ctx.font = "600 28px Oswald, sans-serif"; ctx.fillText("JOURNEY STARTED", 40, 195);
-  ctx.fillStyle = CONCRETE; ctx.font = "500 20px Inter, sans-serif";
-  const goalLabel = GOALS.find(g => g.id === state.goal)?.label || "Getting started";
-  ctx.fillText(`Goal: ${goalLabel}`, 40, 240);
-  ctx.font = "500 16px IBM Plex Mono, monospace";
-  ctx.fillText(new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }), 40, 280);
-}
-
-function downloadBadge() {
-  const canvas = document.getElementById("badge-canvas");
-  const url = canvas.toDataURL("image/png");
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "calistart-stage-1.png";
-  a.click();
 }
 </script>
 </body>
