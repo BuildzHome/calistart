@@ -164,20 +164,58 @@ const EQUIPMENT = [
 ];
 
 const POSES = {
-  wallpushup: { limbs: [[38,50,60,35],[38,50,60,65],[38,60,25,80],[38,60,50,80]], torso:[38,32,38,60], head:[38,22,9], wallX: 62 },
-  pushup: { limbs: [[30,50,15,32],[30,50,15,68],[70,55,88,68],[70,55,88,32]], torso:[30,50,70,55], head:[18,50,9], groundY: 78 },
+  wallpushup: { limbs: [[38,50,60,35],[38,50,60,65],[38,60,25,80],[38,60,50,80]], torso:[38,32,38,60], head:[38,22,9], wallX: 62,
+    pose2: { limbs: [[30,50,60,35],[30,50,60,65],[30,60,25,80],[30,60,50,80]], torso:[30,32,30,60], head:[30,22,9] } },
+  pushup: { limbs: [[30,50,15,32],[30,50,15,68],[70,55,88,68],[70,55,88,32]], torso:[30,50,70,55], head:[18,50,9], groundY: 78,
+    pose2: { limbs: [[30,64,15,32],[30,64,15,68],[70,66,88,68],[70,66,88,32]], torso:[30,64,70,66], head:[18,64,9] } },
   plank: { limbs: [[30,50,20,35],[30,50,20,65],[70,52,88,68],[70,52,88,36]], torso:[30,50,70,52], head:[18,50,9], groundY: 78 },
-  squat: { limbs: [[30,45,18,25],[70,45,82,25],[38,55,30,80],[62,55,70,80]], torso:[50,25,50,45], head:[50,15,9], groundY: 86 },
+  squat: { limbs: [[30,45,18,25],[70,45,82,25],[38,55,30,80],[62,55,70,80]], torso:[50,25,50,45], head:[50,15,9], groundY: 86,
+    pose2: { limbs: [[50,14,42,35],[50,14,58,35],[46,50,38,80],[54,50,62,80]], torso:[50,14,50,50], head:[50,4,9] } },
   wallsit: { limbs: [[30,45,20,45],[70,45,80,45],[38,50,38,80],[62,50,62,80]], torso:[50,20,50,45], head:[50,10,9], groundY: 86, wallX: 22 },
   deadhang: { limbs: [[40,18,22,45],[60,18,78,45],[44,52,36,85],[56,52,64,85]], torso:[50,18,50,52], head:[50,8,9], barY: 12 },
   negativepullup: { limbs: [[38,22,20,45],[62,22,80,45],[44,55,36,85],[56,55,64,85]], torso:[50,22,50,55], head:[50,12,9], barY: 15 },
-  pullup: { limbs: [[42,15,30,28],[58,15,70,28],[44,48,36,80],[56,48,64,80]], torso:[50,15,50,48], head:[50,6,9], barY: 10 },
+  pullup: { limbs: [[42,15,30,28],[58,15,70,28],[44,48,36,80],[56,48,64,80]], torso:[50,15,50,48], head:[50,6,9], barY: 10,
+    pose2: { limbs: [[46,45,30,12],[54,45,70,12],[46,60,38,85],[54,60,64,85]], torso:[50,45,50,60], head:[50,40,9] } },
   handstand: { limbs: [[38,85,22,60],[62,85,78,60],[44,42,36,10],[56,42,64,10]], torso:[50,42,50,85], head:[50,92,9], groundY: 96 },
   superman: { limbs: [[30,50,12,38],[30,50,12,62],[70,50,90,38],[70,50,90,62]], torso:[30,50,70,50], head:[18,50,9], groundY: 62 },
-  bridge: { limbs: [[28,70,18,50],[72,70,82,50],[35,55,32,82],[65,55,68,82]], torso:[28,55,72,70], head:[28,62,8], groundY: 88 },
-  jumpingjack: { limbs: [[50,32,22,10],[50,32,78,10],[50,55,25,85],[50,55,75,85]], torso:[50,32,50,55], head:[50,20,9], groundY: 92 },
+  bridge: { limbs: [[28,70,18,50],[72,70,82,50],[35,55,32,82],[65,55,68,82]], torso:[28,55,72,70], head:[28,62,8], groundY: 88,
+    pose2: { limbs: [[28,80,18,60],[72,80,82,60],[35,68,32,82],[65,68,68,82]], torso:[28,68,72,80], head:[28,72,8] } },
+  jumpingjack: { limbs: [[50,32,22,10],[50,32,78,10],[50,55,25,85],[50,55,75,85]], torso:[50,32,50,55], head:[50,20,9], groundY: 92,
+    pose2: { limbs: [[50,32,40,50],[50,32,60,50],[50,55,45,90],[50,55,55,90]], torso:[50,32,50,55], head:[50,20,9] } },
 };
 const POSE_KEYS = Object.keys(POSES).concat(["rest"]).join(", ");
+
+// --- Animation engine for rep-based poses ---
+let animIcons = [];
+let iconCounter = 0;
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function lerpPose(a, b, t) {
+  return {
+    head: [lerp(a.head[0], b.head[0], t), lerp(a.head[1], b.head[1], t), lerp(a.head[2], b.head[2], t)],
+    torso: a.torso.map((v, i) => lerp(v, b.torso[i], t)),
+    limbs: a.limbs.map((l, i) => l.map((v, j) => lerp(v, b.limbs[i][j], t))),
+  };
+}
+function animLoop(timestamp) {
+  animIcons = animIcons.filter(item => document.getElementById(item.id));
+  animIcons.forEach(item => {
+    const t = (Math.sin(timestamp / 850 + item.phase) + 1) / 2;
+    const p = lerpPose(item.poseA, item.poseB, t);
+    const svg = document.getElementById(item.id);
+    const headEl = svg.querySelector(".f-head");
+    headEl.setAttribute("cx", p.head[0]); headEl.setAttribute("cy", p.head[1]); headEl.setAttribute("r", p.head[2]);
+    const torsoEl = svg.querySelector(".f-torso");
+    torsoEl.setAttribute("x1", p.torso[0]); torsoEl.setAttribute("y1", p.torso[1]);
+    torsoEl.setAttribute("x2", p.torso[2]); torsoEl.setAttribute("y2", p.torso[3]);
+    p.limbs.forEach((l, i) => {
+      const limbEl = svg.querySelector(".f-limb-" + i);
+      if (limbEl) { limbEl.setAttribute("x1", l[0]); limbEl.setAttribute("y1", l[1]); limbEl.setAttribute("x2", l[2]); limbEl.setAttribute("y2", l[3]); }
+    });
+  });
+  requestAnimationFrame(animLoop);
+}
+requestAnimationFrame(animLoop);
 
 let state = { goal: null, limitation: null, equipment: null, plan: null };
 
@@ -206,20 +244,20 @@ renderChoices("goal-choices", GOALS, "goal", "btn-intake1-next");
 renderChoices("limitation-choices", LIMITATIONS, "limitation", "btn-intake2-next");
 renderChoices("equipment-choices", EQUIPMENT, "equipment", "btn-get-plan");
 
-function stickFigureSVG(pose, size, color) {
+function stickFigureSVG(pose, size, color, id) {
   if (pose === "rest" || !POSES[pose]) {
     return `<div style="font-family:'IBM Plex Mono',monospace;font-size:${size*0.28}px;color:${color}">zzz</div>`;
   }
   const p = POSES[pose];
   const guide = "rgba(255,255,255,0.25)";
-  let svg = `<svg width="${size}" height="${size}" viewBox="0 0 100 100">`;
+  let svg = `<svg id="${id}" width="${size}" height="${size}" viewBox="0 0 100 100">`;
   if (p.groundY !== undefined) svg += `<line x1="5" y1="${p.groundY}" x2="95" y2="${p.groundY}" stroke="${guide}" stroke-width="3" stroke-linecap="round" />`;
   if (p.barY !== undefined) svg += `<line x1="20" y1="${p.barY}" x2="80" y2="${p.barY}" stroke="${guide}" stroke-width="3" stroke-linecap="round" />`;
   if (p.wallX !== undefined) svg += `<line x1="${p.wallX}" y1="5" x2="${p.wallX}" y2="95" stroke="${guide}" stroke-width="3" stroke-linecap="round" />`;
-  svg += `<circle cx="${p.head[0]}" cy="${p.head[1]}" r="${p.head[2]}" fill="${color}" />`;
-  svg += `<line x1="${p.torso[0]}" y1="${p.torso[1]}" x2="${p.torso[2]}" y2="${p.torso[3]}" stroke="${color}" stroke-width="8" stroke-linecap="round" />`;
-  p.limbs.forEach(l => {
-    svg += `<line x1="${l[0]}" y1="${l[1]}" x2="${l[2]}" y2="${l[3]}" stroke="${color}" stroke-width="7" stroke-linecap="round" />`;
+  svg += `<circle class="f-head" cx="${p.head[0]}" cy="${p.head[1]}" r="${p.head[2]}" fill="${color}" />`;
+  svg += `<line class="f-torso" x1="${p.torso[0]}" y1="${p.torso[1]}" x2="${p.torso[2]}" y2="${p.torso[3]}" stroke="${color}" stroke-width="8" stroke-linecap="round" />`;
+  p.limbs.forEach((l, i) => {
+    svg += `<line class="f-limb-${i}" x1="${l[0]}" y1="${l[1]}" x2="${l[2]}" y2="${l[3]}" stroke="${color}" stroke-width="7" stroke-linecap="round" />`;
   });
   svg += `</svg>`;
   return svg;
@@ -260,10 +298,15 @@ function renderPlan(plan) {
     card.className = "day-card";
     let html = `<div class="day-label">${d.day}</div>`;
     d.exercises.forEach(ex => {
+      const iconId = "icon-" + (iconCounter++);
       html += `<div class="exercise-row">
-        <div class="exercise-icon">${stickFigureSVG(ex.poseKey, 56, GOLD)}</div>
+        <div class="exercise-icon">${stickFigureSVG(ex.poseKey, 56, GOLD, iconId)}</div>
         <div><div class="exercise-name">${ex.name}</div><div class="exercise-detail">${ex.detail}</div></div>
       </div>`;
+      const poseDef = POSES[ex.poseKey];
+      if (poseDef && poseDef.pose2) {
+        animIcons.push({ id: iconId, poseA: poseDef, poseB: poseDef.pose2, phase: Math.random() * Math.PI * 2 });
+      }
     });
     card.innerHTML = html;
     daysEl.appendChild(card);
