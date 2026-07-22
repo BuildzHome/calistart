@@ -88,7 +88,9 @@
       <div class="mark" style="left:68%"></div>
       <div class="mark last" style="left:90%"></div>
     </div>
-    <button class="btn-primary" onclick="goTo('intake1')">Build my plan</button>
+    <div id="landing-cta">
+      <button class="btn-primary" onclick="handleMainCTA()" id="btn-main-cta">Sign in with Google to start</button>
+    </div>
     <p style="color:var(--concrete);font-size:12px;margin-top:14px;">Free to try · takes 30 seconds</p>
   </div>
 
@@ -151,6 +153,12 @@
 
 <div id="detail-overlay-container"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = "https://ovygrmfnkoehfiojzwyr.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable__AFvS6LNfdcQG0ZlplXt8A_WtQFepBa";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
 <script>
 const GOLD = "#E3A73A", RUST = "#B8461F", CHALK = "#F3EEE4", CONCRETE = "#A9A398", INK = "#1C1B19";
 
@@ -242,6 +250,60 @@ function animLoop(timestamp) {
 requestAnimationFrame(animLoop);
 
 let state = { goal: null, limitation: null, equipment: null, plan: null };
+let currentUser = null;
+let currentProfile = null;
+
+async function initAuth() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    await loadOrCreateProfile();
+  }
+  updateLandingCTA();
+}
+
+async function loadOrCreateProfile() {
+  let { data, error } = await supabaseClient.from("profiles").select("*").eq("id", currentUser.id).single();
+  if (!data) {
+    const { data: created } = await supabaseClient
+      .from("profiles")
+      .insert({ id: currentUser.id, trial_used: false })
+      .select()
+      .single();
+    data = created;
+  }
+  currentProfile = data;
+}
+
+function updateLandingCTA() {
+  const btn = document.getElementById("btn-main-cta");
+  if (!currentUser) {
+    btn.textContent = "Sign in with Google to start";
+  } else if (currentProfile && currentProfile.trial_used) {
+    btn.textContent = "Subscribe to build a new plan";
+  } else {
+    btn.textContent = "Build my plan";
+  }
+}
+
+async function signInWithGoogle() {
+  await supabaseClient.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: window.location.origin },
+  });
+}
+
+function handleMainCTA() {
+  if (!currentUser) {
+    signInWithGoogle();
+  } else if (currentProfile && currentProfile.trial_used) {
+    alert("Stripe subscription link goes here");
+  } else {
+    goTo("intake1");
+  }
+}
+
+initAuth();
 
 function goTo(name) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
@@ -336,6 +398,12 @@ async function generatePlan() {
     state.plan = data;
     renderPlan(data);
     goTo("plan");
+
+    if (currentUser) {
+      await supabaseClient.from("profiles").update({ trial_used: true }).eq("id", currentUser.id);
+      currentProfile = { ...currentProfile, trial_used: true };
+      updateLandingCTA();
+    }
   } catch (e) {
     document.getElementById("intake-error").innerHTML = `<p class="error-text">Debug error: ${e.message}</p>`;
     goTo("intake3");
