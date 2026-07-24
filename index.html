@@ -88,6 +88,7 @@
       <div class="mark" style="left:68%"></div>
       <div class="mark last" style="left:90%"></div>
     </div>
+    <div id="payment-status"></div>
     <div id="landing-cta">
       <button class="btn-primary" onclick="handleMainCTA()" id="btn-main-cta">Sign in with Google to start</button>
     </div>
@@ -145,7 +146,7 @@
 
     <div class="divider">
       <p>Keep your plan updating as you train, plus unlimited form checks.</p>
-      <button class="btn-primary" onclick="alert('Stripe subscription link goes here')">Subscribe — £6.99/mo</button>
+      <button class="btn-primary" onclick="startCheckout()">Subscribe — £6.99/mo</button>
     </div>
   </div>
 
@@ -260,6 +261,19 @@ async function initAuth() {
     await loadOrCreateProfile();
   }
   updateLandingCTA();
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("success") === "true") {
+    document.getElementById("payment-status").innerHTML =
+      `<p style="color:var(--gold);font-size:13px;margin-bottom:10px;">Payment received — confirming your subscription…</p>`;
+    setTimeout(async () => {
+      await loadOrCreateProfile();
+      updateLandingCTA();
+      document.getElementById("payment-status").innerHTML = currentProfile.subscribed
+        ? `<p style="color:var(--gold);font-size:13px;margin-bottom:10px;">You're subscribed. Welcome in.</p>`
+        : `<p style="color:var(--concrete);font-size:13px;margin-bottom:10px;">Still confirming — refresh in a moment if this doesn't update.</p>`;
+    }, 2500);
+  }
 }
 
 async function loadOrCreateProfile() {
@@ -267,7 +281,7 @@ async function loadOrCreateProfile() {
   if (!data) {
     const { data: created } = await supabaseClient
       .from("profiles")
-      .insert({ id: currentUser.id, trial_used: false })
+      .insert({ id: currentUser.id, trial_used: false, subscribed: false })
       .select()
       .single();
     data = created;
@@ -279,8 +293,10 @@ function updateLandingCTA() {
   const btn = document.getElementById("btn-main-cta");
   if (!currentUser) {
     btn.textContent = "Sign in with Google to start";
+  } else if (currentProfile && currentProfile.subscribed) {
+    btn.textContent = "Build my plan";
   } else if (currentProfile && currentProfile.trial_used) {
-    btn.textContent = "Subscribe to build a new plan";
+    btn.textContent = "Subscribe — £6.99/mo";
   } else {
     btn.textContent = "Build my plan";
   }
@@ -293,11 +309,33 @@ async function signInWithGoogle() {
   });
 }
 
+async function startCheckout() {
+  const btn = document.getElementById("btn-main-cta");
+  btn.disabled = true;
+  btn.textContent = "Loading…";
+  try {
+    const res = await fetch("/api/create-checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: currentUser.id }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "Unknown error");
+    window.location.href = data.url;
+  } catch (e) {
+    alert("Debug error: " + e.message);
+    btn.disabled = false;
+    updateLandingCTA();
+  }
+}
+
 function handleMainCTA() {
   if (!currentUser) {
     signInWithGoogle();
+  } else if (currentProfile && currentProfile.subscribed) {
+    goTo("intake1");
   } else if (currentProfile && currentProfile.trial_used) {
-    alert("Stripe subscription link goes here");
+    startCheckout();
   } else {
     goTo("intake1");
   }
