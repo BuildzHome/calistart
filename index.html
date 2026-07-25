@@ -293,7 +293,7 @@ function updateLandingCTA() {
   const btn = document.getElementById("btn-main-cta");
   if (!currentUser) {
     btn.textContent = "Sign in with Google to start";
-  } else if (currentProfile && currentProfile.plan) {
+  } else if (currentProfile && currentProfile.plan && currentProfile.plan.weeks) {
     btn.textContent = "View my plan";
   } else if (currentProfile && currentProfile.trial_used && !currentProfile.subscribed) {
     btn.textContent = "Subscribe — £6.99/mo";
@@ -332,7 +332,7 @@ async function startCheckout() {
 function handleMainCTA() {
   if (!currentUser) {
     signInWithGoogle();
-  } else if (currentProfile && currentProfile.plan) {
+  } else if (currentProfile && currentProfile.plan && currentProfile.plan.weeks) {
     renderPlan(currentProfile.plan);
     goTo("plan");
   } else if (currentProfile && currentProfile.trial_used && !currentProfile.subscribed) {
@@ -471,7 +471,7 @@ async function getNextWeek() {
     const planData = currentProfile.plan;
     const lastWeek = planData.weeks[planData.weeks.length - 1];
     const summary = lastWeek.days
-      .map(d => d.day + ": " + d.exercises.map(e => e.name).join(", "))
+      .map(d => d.day + ": " + d.exercises.map(e => `${e.name} (${e.detail})`).join(", "))
       .join(" | ");
     const nextWeekNumber = planData.weeks.length + 1;
 
@@ -549,15 +549,18 @@ function showTimerOptions() {
   });
 }
 
+let currentFacing = "environment";
+
 async function startCamera(duration) {
   const area = document.getElementById("camera-area");
   try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacing } });
     area.innerHTML = `
       <div class="camera-wrap">
         <video id="camera-video" autoplay playsinline muted></video>
         <div class="countdown-overlay" id="countdown-overlay" style="display:none;"></div>
       </div>
+      <button class="btn-dashed" id="btn-flip-camera" onclick="flipCamera(${duration})">Switch to ${currentFacing === "environment" ? "front" : "back"} camera</button>
       <button class="btn-primary" id="btn-start-timer">Start ${duration}s timer</button>
     `;
     const video = document.getElementById("camera-video");
@@ -566,6 +569,15 @@ async function startCamera(duration) {
   } catch (e) {
     area.innerHTML = `<div class="photo-result">Couldn't access the camera: ${e.message}. Check your browser's camera permission for this site.</div>`;
   }
+}
+
+function flipCamera(duration) {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  currentFacing = currentFacing === "environment" ? "user" : "environment";
+  startCamera(duration);
 }
 
 function startCountdown(duration) {
