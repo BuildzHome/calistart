@@ -4,16 +4,21 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const { goalLabel, limitationLabel, equipmentLabel, poseKeys } = req.body;
+  const { goalLabel, limitationLabel, equipmentLabel, poseKeys, weekNumber, previousWeekSummary } = req.body;
+
+  const progressionBlock = previousWeekSummary
+    ? `\nThis is week ${weekNumber} of an ongoing program toward the same goal. Here is what they did last week:\n${previousWeekSummary}\n\nProgress the difficulty sensibly from last week — slightly more reps, longer holds, or a natural next-step exercise variation toward the goal. Don't jump too far ahead; build gradually.`
+    : "";
 
   const prompt = `You are a calm, encouraging calisthenics coach for a total beginner.
 Goal: ${goalLabel}
 Limitation: ${limitationLabel}
 Equipment available: ${equipmentLabel}
+${progressionBlock}
 
 Return ONLY valid JSON, no markdown fences, no commentary, matching this exact shape:
 {
-  "intro": "one warm sentence addressing their specific limitation directly",
+  "intro": "one warm sentence addressing their specific limitation directly${previousWeekSummary ? ", acknowledging their progress so far" : ""}",
   "days": [
     { "day": "Day 1", "exercises": [ { "name": "short exercise name", "detail": "sets/reps or duration", "poseKey": "one of: ${poseKeys}" } ] }
   ],
