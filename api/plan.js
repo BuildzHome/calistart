@@ -7,7 +7,7 @@ module.exports = async function handler(req, res) {
   const { goalLabel, limitationLabel, equipmentLabel, poseKeys, weekNumber, previousWeekSummary } = req.body;
 
   const progressionBlock = previousWeekSummary
-    ? `\nThis is week ${weekNumber} of an ongoing program toward the same goal. Here is what they did last week:\n${previousWeekSummary}\n\nProgress the difficulty sensibly from last week — slightly more reps, longer holds, or a natural next-step exercise variation toward the goal. Don't jump too far ahead; build gradually.`
+    ? `\nThis is week ${weekNumber} of an ongoing program toward the same goal. Here is what they did last week:\n${previousWeekSummary}\n\nYou MUST make a concrete, noticeable increase from last week for every exercise that repeats — add at least 2-3 more reps, or at least 5-10 more seconds to any hold/duration, or add one extra set. Do not repeat the exact same numbers as last week under any circumstance. If an exercise was mastered easily, replace it with a harder variation from the allowed pose list instead. State the specific improvement in the intro (e.g., "up from 5 to 8 reps").`
     : "";
 
   const prompt = `You are a calm, encouraging calisthenics coach for a total beginner.
