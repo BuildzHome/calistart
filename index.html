@@ -144,7 +144,7 @@
     <div id="camera-area"></div>
     <div id="photo-result"></div>
 
-    <div class="divider">
+    <div class="divider" id="plan-subscribe-section">
       <p>Keep your plan updating as you train, plus unlimited form checks.</p>
       <button class="btn-primary" onclick="startCheckout()">Subscribe — £6.99/mo</button>
     </div>
@@ -293,9 +293,9 @@ function updateLandingCTA() {
   const btn = document.getElementById("btn-main-cta");
   if (!currentUser) {
     btn.textContent = "Sign in with Google to start";
-  } else if (currentProfile && currentProfile.subscribed) {
-    btn.textContent = "Build my plan";
-  } else if (currentProfile && currentProfile.trial_used) {
+  } else if (currentProfile && currentProfile.plan) {
+    btn.textContent = "View my plan";
+  } else if (currentProfile && currentProfile.trial_used && !currentProfile.subscribed) {
     btn.textContent = "Subscribe — £6.99/mo";
   } else {
     btn.textContent = "Build my plan";
@@ -332,12 +332,24 @@ async function startCheckout() {
 function handleMainCTA() {
   if (!currentUser) {
     signInWithGoogle();
-  } else if (currentProfile && currentProfile.subscribed) {
-    goTo("intake1");
-  } else if (currentProfile && currentProfile.trial_used) {
+  } else if (currentProfile && currentProfile.plan) {
+    renderPlan(currentProfile.plan);
+    goTo("plan");
+  } else if (currentProfile && currentProfile.trial_used && !currentProfile.subscribed) {
     startCheckout();
   } else {
     goTo("intake1");
+  }
+}
+
+function updateSubscribeSectionVisibility() {
+  const section = document.getElementById("plan-subscribe-section");
+  if (currentProfile && currentProfile.subscribed) {
+    section.innerHTML = `<p>Ready for the next stage?</p>
+      <button class="btn-primary" id="next-week-btn" onclick="getNextWeek()">Get next week's plan</button>`;
+  } else {
+    section.innerHTML = `<p>Keep your plan updating as you train, plus unlimited form checks.</p>
+      <button class="btn-primary" onclick="startCheckout()">Subscribe — £6.99/mo</button>`;
   }
 }
 
@@ -428,18 +440,22 @@ async function generatePlan() {
     const res = await fetch("/api/plan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ goalLabel, limitationLabel, equipmentLabel, poseKeys: POSE_KEYS }),
+      body: JSON.stringify({ goalLabel, limitationLabel, equipmentLabel, poseKeys: POSE_KEYS, weekNumber: 1 }),
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "Unknown error");
 
-    state.plan = data;
-    renderPlan(data);
+    const planData = {
+      goalLabel, limitationLabel, equipmentLabel,
+      weeks: [{ weekNumber: 1, ...data }],
+    };
+    state.planData = planData;
+    renderPlan(planData);
     goTo("plan");
 
     if (currentUser) {
-      await supabaseClient.from("profiles").update({ trial_used: true }).eq("id", currentUser.id);
-      currentProfile = { ...currentProfile, trial_used: true };
+      await supabaseClient.from("profiles").update({ trial_used: true, plan: planData }).eq("id", currentUser.id);
+      currentProfile = { ...currentProfile, trial_used: true, plan: planData };
       updateLandingCTA();
     }
   } catch (e) {
@@ -448,8 +464,47 @@ async function generatePlan() {
   }
 }
 
-function renderPlan(plan) {
-  document.getElementById("plan-intro").textContent = plan.intro;
+async function getNextWeek() {
+  const btn = document.getElementById("next-week-btn");
+  if (btn) { btn.disabled = true; btn.textContent = "Building week…"; }
+  try {
+    const planData = currentProfile.plan;
+    const lastWeek = planData.weeks[planData.weeks.length - 1];
+    const summary = lastWeek.days
+      .map(d => d.day + ": " + d.exercises.map(e => e.name).join(", "))
+      .join(" | ");
+    const nextWeekNumber = planData.weeks.length + 1;
+
+    const res = await fetch("/api/plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        goalLabel: planData.goalLabel,
+        limitationLabel: planData.limitationLabel,
+        equipmentLabel: planData.equipmentLabel,
+        poseKeys: POSE_KEYS,
+        weekNumber: nextWeekNumber,
+        previousWeekSummary: summary,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "Unknown error");
+
+    planData.weeks.push({ weekNumber: nextWeekNumber, ...data });
+    await supabaseClient.from("profiles").update({ plan: planData }).eq("id", currentUser.id);
+    currentProfile = { ...currentProfile, plan: planData };
+    renderPlan(planData);
+  } catch (e) {
+    alert("Debug error: " + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = "Get next week's plan"; }
+  }
+}
+
+function renderPlan(planData) {
+  const weeks = planData.weeks;
+  const plan = weeks[weeks.length - 1];
+  document.getElementById("plan-intro").textContent =
+    (weeks.length > 1 ? `Week ${plan.weekNumber} — ` : "") + plan.intro;
   document.getElementById("safety-tip").textContent = plan.safetyTip;
   const daysEl = document.getElementById("plan-days");
   daysEl.innerHTML = "";
@@ -471,6 +526,7 @@ function renderPlan(plan) {
     card.innerHTML = html;
     daysEl.appendChild(card);
   });
+  updateSubscribeSectionVisibility();
 }
 
 let cameraStream = null;
