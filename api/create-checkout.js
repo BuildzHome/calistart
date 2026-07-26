@@ -14,8 +14,8 @@ module.exports = async function handler(req, res) {
 
   try {
     const params = new URLSearchParams();
-    params.append("mode", "subscription");
-    params.append("line_items[0][price]", "price_1Twp6JEFYGlufNmldUoUAgEJ");
+    params.append("mode", "payment");
+    params.append("line_items[0][price]", "price_1TxEnDEFYGlufNmlNCmzRUQl");
     params.append("line_items[0][quantity]", "1");
     params.append("success_url", `${origin}/?success=true`);
     params.append("cancel_url", `${origin}/`);
