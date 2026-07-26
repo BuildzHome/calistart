@@ -342,16 +342,81 @@ function handleMainCTA() {
   }
 }
 
+const PROGRAM_WEEK_CAP = 4;
+
 function updateSubscribeSectionVisibility(allDaysDone) {
   const section = document.getElementById("plan-subscribe-section");
+  const weeks = currentProfile && currentProfile.plan ? currentProfile.plan.weeks : (state.planData ? state.planData.weeks : [{}]);
+  const weekCount = weeks.length;
+  const isMaintenance = currentProfile && currentProfile.plan && currentProfile.plan.maintenanceMode;
+
   if (!allDaysDone) {
     section.innerHTML = `<p style="color:var(--concrete);font-size:13px;">Finish all 7 days this week to continue.</p>`;
+  } else if (weekCount >= PROGRAM_WEEK_CAP && !isMaintenance) {
+    section.innerHTML = `<button class="btn-primary" onclick="showVictoryScreen()">See your results 🎉</button>`;
+  } else if (isMaintenance) {
+    section.innerHTML = `<p>Keep it sharp — generate another maintenance week whenever you're ready.</p>
+      <button class="btn-primary" onclick="getMaintenanceWeek()">Get maintenance week</button>`;
   } else if (currentProfile && currentProfile.subscribed) {
     section.innerHTML = `<p>Week complete! Ready for the next stage?</p>
       <button class="btn-primary" id="next-week-btn" onclick="getNextWeek()">Get next week's plan</button>`;
   } else {
     section.innerHTML = `<p>You finished your free 7 days — keep the momentum going.</p>
       <button class="btn-primary" onclick="startCheckout()">Unlock Full Roadmap — £4.99</button>`;
+  }
+}
+
+function showVictoryScreen() {
+  const planData = currentProfile.plan;
+  const container = document.getElementById("detail-overlay-container");
+  container.innerHTML = `
+    <div class="detail-overlay" onclick="closeExerciseDetail(event)">
+      <div class="detail-card" onclick="event.stopPropagation()">
+        <button class="detail-close" onclick="closeExerciseDetail()">✕</button>
+        <div style="font-size:40px;margin:10px 0;">🎉</div>
+        <div class="detail-name">Goal achieved</div>
+        <p style="color:var(--concrete);font-size:14px;margin-bottom:20px;">You've completed your ${PROGRAM_WEEK_CAP}-week program toward: ${planData.goalLabel}. That's real, consistent work — well done.</p>
+        <button class="btn-primary" onclick="closeExerciseDetail(); getMaintenanceWeek();">Switch to maintenance mode</button>
+        <button class="btn-outline" style="margin-top:10px;" onclick="closeExerciseDetail()">More skills — coming soon</button>
+      </div>
+    </div>
+  `;
+}
+
+async function getMaintenanceWeek() {
+  const btn = document.getElementById("next-week-btn") || document.querySelector("#plan-subscribe-section button");
+  if (btn) { btn.disabled = true; btn.textContent = "Building week…"; }
+  try {
+    const planData = currentProfile.plan;
+    const lastWeek = planData.weeks[planData.weeks.length - 1];
+    const summary = lastWeek.days
+      .map(d => d.day + ": " + d.exercises.map(e => `${e.name} (${e.detail})`).join(", "))
+      .join(" | ");
+
+    const res = await fetch("/api/plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        goalLabel: planData.goalLabel,
+        limitationLabel: planData.limitationLabel,
+        equipmentLabel: planData.equipmentLabel,
+        poseKeys: POSE_KEYS,
+        weekNumber: planData.weeks.length + 1,
+        previousWeekSummary: summary,
+        maintenance: true,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "Unknown error");
+
+    planData.weeks.push({ weekNumber: planData.weeks.length + 1, ...data });
+    planData.maintenanceMode = true;
+    await supabaseClient.from("profiles").update({ plan: planData }).eq("id", currentUser.id);
+    currentProfile = { ...currentProfile, plan: planData };
+    renderPlan(planData);
+  } catch (e) {
+    alert("Debug error: " + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = "Get maintenance week"; }
   }
 }
 
