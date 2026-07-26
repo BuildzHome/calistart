@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
 Their limitation: ${limitationLabel}
 Equipment available: ${equipmentLabel}
 
-Give them an easier scale-down version of the SAME workout — same number of exercises, but genuinely less demanding (e.g. swap a full wall walk for an elevated pike hold on a chair/bed, reduce hold times, use assisted variations).
+Give them an easier scale-down version of the SAME workout — same number of exercises. Every single exercise MUST be measurably easier than what's listed above: either a genuinely different, more assisted/regressed variation (e.g. wall walk → elevated pike hold on a chair/bed, full push-up → wall push-up, dead hang → assisted dead hang with feet on a chair), OR the same exercise with noticeably reduced reps/hold time (at least 30-40% less than before). Do NOT return the same exercise name with the same numbers as before — that is not acceptable. Prefer switching to a genuinely different, easier movement over just lowering numbers on the same one.
 
 Return ONLY valid JSON, no markdown fences, no commentary, matching this exact shape:
 {
