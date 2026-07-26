@@ -146,7 +146,7 @@
 
     <div class="divider" id="plan-subscribe-section">
       <p>Keep your plan updating as you train, plus unlimited form checks.</p>
-      <button class="btn-primary" onclick="startCheckout()">Subscribe — £6.99/mo</button>
+      <button class="btn-primary" onclick="startCheckout()">Unlock Full Roadmap — £4.99</button>
     </div>
   </div>
 
@@ -270,7 +270,7 @@ async function initAuth() {
       await loadOrCreateProfile();
       updateLandingCTA();
       document.getElementById("payment-status").innerHTML = currentProfile.subscribed
-        ? `<p style="color:var(--gold);font-size:13px;margin-bottom:10px;">You're subscribed. Welcome in.</p>`
+        ? `<p style="color:var(--gold);font-size:13px;margin-bottom:10px;">Full roadmap unlocked. Welcome in.</p>`
         : `<p style="color:var(--concrete);font-size:13px;margin-bottom:10px;">Still confirming — refresh in a moment if this doesn't update.</p>`;
     }, 2500);
   }
@@ -296,7 +296,7 @@ function updateLandingCTA() {
   } else if (currentProfile && currentProfile.plan && currentProfile.plan.weeks) {
     btn.textContent = "View my plan";
   } else if (currentProfile && currentProfile.trial_used && !currentProfile.subscribed) {
-    btn.textContent = "Subscribe — £6.99/mo";
+    btn.textContent = "Unlock Full Roadmap — £4.99";
   } else {
     btn.textContent = "Build my plan";
   }
@@ -349,7 +349,7 @@ function updateSubscribeSectionVisibility() {
       <button class="btn-primary" id="next-week-btn" onclick="getNextWeek()">Get next week's plan</button>`;
   } else {
     section.innerHTML = `<p>Keep your plan updating as you train, plus unlimited form checks.</p>
-      <button class="btn-primary" onclick="startCheckout()">Subscribe — £6.99/mo</button>`;
+      <button class="btn-primary" onclick="startCheckout()">Unlock Full Roadmap — £4.99</button>`;
   }
 }
 
