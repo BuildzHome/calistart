@@ -503,15 +503,29 @@ async function getNextWeek() {
 function renderPlan(planData) {
   const weeks = planData.weeks;
   const plan = weeks[weeks.length - 1];
+  if (!plan.completed) plan.completed = plan.days.map(() => false);
+
   document.getElementById("plan-intro").textContent =
     (weeks.length > 1 ? `Week ${plan.weekNumber} — ` : "") + plan.intro;
   document.getElementById("safety-tip").textContent = plan.safetyTip;
   const daysEl = document.getElementById("plan-days");
   daysEl.innerHTML = "";
-  plan.days.forEach(d => {
+
+  plan.days.forEach((d, i) => {
+    const isDone = plan.completed[i];
+    const isUnlocked = i === 0 || plan.completed[i - 1];
     const card = document.createElement("div");
     card.className = "day-card";
-    let html = `<div class="day-label">${d.day}</div>`;
+
+    if (!isUnlocked) {
+      card.innerHTML = `<div class="day-label">${d.day} <span style="color:var(--concrete);">🔒 Locked</span></div>
+        <p style="color:var(--concrete);font-size:13px;">Complete ${plan.days[i - 1].day} to unlock this.</p>`;
+      card.style.opacity = "0.5";
+      daysEl.appendChild(card);
+      return;
+    }
+
+    let html = `<div class="day-label">${d.day}${isDone ? ' <span style="color:var(--gold);">✓ Done</span>' : ""}</div>`;
     d.exercises.forEach(ex => {
       const iconId = "icon-" + (iconCounter++);
       html += `<div class="exercise-row" onclick='openExerciseDetail(${JSON.stringify(ex.poseKey)}, ${JSON.stringify(ex.name)}, ${JSON.stringify(ex.detail)})'>
@@ -523,10 +537,92 @@ function renderPlan(planData) {
         animIcons.push({ id: iconId, poseA: poseDef, poseB: poseDef.pose2, phase: Math.random() * Math.PI * 2 });
       }
     });
+    if (!isDone) {
+      html += `<button class="btn-outline" style="margin-top:6px;margin-bottom:0;" onclick="openPassFail(${i})">Mark ${d.day} complete</button>`;
+    }
     card.innerHTML = html;
     daysEl.appendChild(card);
   });
   updateSubscribeSectionVisibility();
+}
+
+function openPassFail(dayIndex) {
+  const planData = currentProfile.plan;
+  const weeks = planData.weeks;
+  const plan = weeks[weeks.length - 1];
+  const day = plan.days[dayIndex];
+  const container = document.getElementById("detail-overlay-container");
+  container.innerHTML = `
+    <div class="detail-overlay" onclick="closeExerciseDetail(event)">
+      <div class="detail-card" onclick="event.stopPropagation()">
+        <button class="detail-close" onclick="closeExerciseDetail()">✕</button>
+        <div class="detail-name" style="margin-top:10px;">${day.day} check</div>
+        <p style="color:var(--concrete);font-size:14px;margin-bottom:20px;">Could you complete today's hardest exercise as instructed — full reps, full hold time?</p>
+        <button class="btn-primary" onclick="passFailAnswer(${dayIndex}, true)">Yes — I did it</button>
+        <button class="btn-outline" style="margin-top:10px;" onclick="passFailAnswer(${dayIndex}, false)">Not quite</button>
+      </div>
+    </div>
+  `;
+}
+
+async function passFailAnswer(dayIndex, passed) {
+  if (passed) {
+    const planData = currentProfile.plan;
+    const plan = planData.weeks[planData.weeks.length - 1];
+    plan.completed[dayIndex] = true;
+    await supabaseClient.from("profiles").update({ plan: planData }).eq("id", currentUser.id);
+    currentProfile = { ...currentProfile, plan: planData };
+    closeExerciseDetail();
+    renderPlan(planData);
+  } else {
+    showFailChoices(dayIndex);
+  }
+}
+
+function showFailChoices(dayIndex) {
+  const container = document.getElementById("detail-overlay-container");
+  container.innerHTML = `
+    <div class="detail-overlay" onclick="closeExerciseDetail(event)">
+      <div class="detail-card" onclick="event.stopPropagation()">
+        <button class="detail-close" onclick="closeExerciseDetail()">✕</button>
+        <div class="detail-name" style="margin-top:10px;">No worries</div>
+        <p style="color:var(--concrete);font-size:14px;margin-bottom:20px;">That's completely normal — what do you want to do?</p>
+        <button class="btn-primary" onclick="closeExerciseDetail()">Repeat tomorrow</button>
+        <button class="btn-outline" style="margin-top:10px;" onclick="switchToEasierDrill(${dayIndex})">Switch to an easier drill</button>
+      </div>
+    </div>
+  `;
+}
+
+async function switchToEasierDrill(dayIndex) {
+  const container = document.getElementById("detail-overlay-container");
+  container.innerHTML = `<div class="detail-overlay"><div class="detail-card"><p style="color:var(--concrete);">Finding an easier version…</p></div></div>`;
+  try {
+    const planData = currentProfile.plan;
+    const plan = planData.weeks[planData.weeks.length - 1];
+    const day = plan.days[dayIndex];
+
+    const res = await fetch("/api/easier-day", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        currentExercises: day.exercises,
+        limitationLabel: planData.limitationLabel,
+        equipmentLabel: planData.equipmentLabel,
+        poseKeys: POSE_KEYS,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "Unknown error");
+
+    plan.days[dayIndex] = { day: day.day, exercises: data.exercises };
+    await supabaseClient.from("profiles").update({ plan: planData }).eq("id", currentUser.id);
+    currentProfile = { ...currentProfile, plan: planData };
+    closeExerciseDetail();
+    renderPlan(planData);
+  } catch (e) {
+    container.innerHTML = `<div class="detail-overlay" onclick="closeExerciseDetail(event)"><div class="detail-card" onclick="event.stopPropagation()"><button class="detail-close" onclick="closeExerciseDetail()">✕</button><p class="error-text">Debug error: ${e.message}</p></div></div>`;
+  }
 }
 
 let cameraStream = null;
