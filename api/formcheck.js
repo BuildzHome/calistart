@@ -6,7 +6,14 @@ module.exports = async function handler(req, res) {
 
   const { imageBase64, mediaType } = req.body;
 
-  const prompt = `You're a calisthenics form coach. Look at this photo of someone mid-exercise. In under 120 words: name the exercise if identifiable, point out 1-2 specific things about their form (alignment, joint angles, positioning), and give one clear fix. Be direct but encouraging. Plain text, no markdown.`;
+  const prompt = `You're a calisthenics form coach. Look at this photo of someone mid-exercise.
+
+Respond with EXACTLY 3 short lines, nothing else — no intro, no exercise name header, no extra commentary:
+🟢 [one short phrase — what they're doing right]
+🔴 [one short phrase — the main thing to fix]
+💡 [one short phrase — a quick cue to fix it]
+
+Each line must be under 12 words. Be specific and direct, not generic. Plain text, no markdown, no asterisks.`;
 
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
