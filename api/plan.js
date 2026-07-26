@@ -4,9 +4,11 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const { goalLabel, limitationLabel, equipmentLabel, poseKeys, weekNumber, previousWeekSummary } = req.body;
+  const { goalLabel, limitationLabel, equipmentLabel, poseKeys, weekNumber, previousWeekSummary, maintenance } = req.body;
 
-  const progressionBlock = previousWeekSummary
+  const progressionBlock = maintenance
+    ? `\nThis person has already completed their full program and achieved their goal: ${goalLabel}. Here is what they did last week:\n${previousWeekSummary}\n\nThis is a MAINTENANCE week — the goal is to keep their skill sharp, not to keep increasing difficulty. Keep exercises at roughly the same level as last week (don't push harder), and it's fine to use fewer sessions per week if appropriate for upkeep.`
+    : previousWeekSummary
     ? `\nThis is week ${weekNumber} of an ongoing program toward the same goal. Here is what they did last week:\n${previousWeekSummary}\n\nYou MUST make a concrete, noticeable increase from last week for every exercise that repeats — add at least 2-3 more reps, or at least 5-10 more seconds to any hold/duration, or add one extra set. Do not repeat the exact same numbers as last week under any circumstance. If an exercise was mastered easily, replace it with a harder variation from the allowed pose list instead. State the specific improvement in the intro (e.g., "up from 5 to 8 reps").`
     : "";
 
