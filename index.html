@@ -129,7 +129,7 @@
 
   <!-- PLAN -->
   <div class="screen" id="screen-plan">
-    <div class="eyebrow">YOUR PROGRAM</div>
+    <div class="eyebrow" id="plan-eyebrow">FREE 7-DAY PLAN</div>
     <p class="plan-intro" id="plan-intro"></p>
     <div id="plan-days"></div>
     <div class="safety-note"><strong>Safety note: </strong><span id="safety-tip"></span></div>
@@ -342,13 +342,15 @@ function handleMainCTA() {
   }
 }
 
-function updateSubscribeSectionVisibility() {
+function updateSubscribeSectionVisibility(allDaysDone) {
   const section = document.getElementById("plan-subscribe-section");
-  if (currentProfile && currentProfile.subscribed) {
-    section.innerHTML = `<p>Ready for the next stage?</p>
+  if (!allDaysDone) {
+    section.innerHTML = `<p style="color:var(--concrete);font-size:13px;">Finish all 7 days this week to continue.</p>`;
+  } else if (currentProfile && currentProfile.subscribed) {
+    section.innerHTML = `<p>Week complete! Ready for the next stage?</p>
       <button class="btn-primary" id="next-week-btn" onclick="getNextWeek()">Get next week's plan</button>`;
   } else {
-    section.innerHTML = `<p>Keep your plan updating as you train, plus unlimited form checks.</p>
+    section.innerHTML = `<p>You finished your free 7 days — keep the momentum going.</p>
       <button class="btn-primary" onclick="startCheckout()">Unlock Full Roadmap — £4.99</button>`;
   }
 }
@@ -505,6 +507,7 @@ function renderPlan(planData) {
   const plan = weeks[weeks.length - 1];
   if (!plan.completed) plan.completed = plan.days.map(() => false);
 
+  document.getElementById("plan-eyebrow").textContent = weeks.length > 1 ? "YOUR PROGRAM" : "FREE 7-DAY PLAN";
   document.getElementById("plan-intro").textContent =
     (weeks.length > 1 ? `Week ${plan.weekNumber} — ` : "") + plan.intro;
   document.getElementById("safety-tip").textContent = plan.safetyTip;
@@ -543,7 +546,9 @@ function renderPlan(planData) {
     card.innerHTML = html;
     daysEl.appendChild(card);
   });
-  updateSubscribeSectionVisibility();
+
+  const allDaysDone = plan.completed.every(Boolean);
+  updateSubscribeSectionVisibility(allDaysDone);
 }
 
 function openPassFail(dayIndex) {
