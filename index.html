@@ -129,7 +129,10 @@
 
   <!-- PLAN -->
   <div class="screen" id="screen-plan">
-    <div class="eyebrow" id="plan-eyebrow">FREE 7-DAY PLAN</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+      <div class="eyebrow" id="plan-eyebrow" style="margin-bottom:0;">FREE 7-DAY PLAN</div>
+      <div id="streak-display" style="font-family:'Oswald',sans-serif;font-size:14px;color:var(--gold);"></div>
+    </div>
     <p class="plan-intro" id="plan-intro"></p>
     <div id="plan-days"></div>
     <div class="safety-note"><strong>Safety note: </strong><span id="safety-tip"></span></div>
@@ -153,6 +156,10 @@
 </div>
 
 <div id="detail-overlay-container"></div>
+<div id="rest-timer-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--rust);color:var(--chalk);padding:14px 20px;align-items:center;justify-content:space-between;z-index:200;font-family:'Oswald',sans-serif;">
+  <span id="rest-timer-text" style="font-size:15px;letter-spacing:1px;">Rest: 60s</span>
+  <button onclick="skipRestTimer()" style="background:rgba(0,0,0,0.2);border:none;color:var(--chalk);padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;">Skip</button>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -589,12 +596,74 @@ async function getNextWeek() {
   }
 }
 
+function parseSetCount(detail) {
+  const match = detail.match(/^(\d+)\s*sets?/i);
+  return match ? parseInt(match[1], 10) : 3;
+}
+
+let audioCtx = null;
+function playBeep() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.5);
+  } catch (e) {}
+}
+
+let restTimerInterval = null;
+
+async function toggleSet(dayIndex, exIndex, setIdx) {
+  const planData = currentProfile.plan;
+  const plan = planData.weeks[planData.weeks.length - 1];
+  const ex = plan.days[dayIndex].exercises[exIndex];
+  const turningOn = !ex.setsDone[setIdx];
+  ex.setsDone[setIdx] = turningOn;
+
+  await supabaseClient.from("profiles").update({ plan: planData }).eq("id", currentUser.id);
+  currentProfile = { ...currentProfile, plan: planData };
+  renderPlan(planData);
+
+  if (turningOn) startRestTimer(60);
+}
+
+function startRestTimer(seconds) {
+  clearInterval(restTimerInterval);
+  const bar = document.getElementById("rest-timer-bar");
+  let remaining = seconds;
+  bar.style.display = "flex";
+  bar.querySelector("#rest-timer-text").textContent = `Rest: ${remaining}s`;
+  restTimerInterval = setInterval(() => {
+    remaining -= 1;
+    if (remaining <= 0) {
+      clearInterval(restTimerInterval);
+      playBeep();
+      bar.style.display = "none";
+    } else {
+      bar.querySelector("#rest-timer-text").textContent = `Rest: ${remaining}s`;
+    }
+  }, 1000);
+}
+
+function skipRestTimer() {
+  clearInterval(restTimerInterval);
+  document.getElementById("rest-timer-bar").style.display = "none";
+}
+
 function renderPlan(planData) {
   const weeks = planData.weeks;
   const plan = weeks[weeks.length - 1];
   if (!plan.completed) plan.completed = plan.days.map(() => false);
 
   document.getElementById("plan-eyebrow").textContent = weeks.length > 1 ? "YOUR PROGRAM" : "FREE 7-DAY PLAN";
+  const streakVal = (currentProfile && currentProfile.streak) || 0;
+  document.getElementById("streak-display").textContent = streakVal > 0 ? `🔥 ${streakVal} day streak` : "";
   document.getElementById("plan-intro").textContent =
     (weeks.length > 1 ? `Week ${plan.weekNumber} — ` : "") + plan.intro;
   document.getElementById("safety-tip").textContent = plan.safetyTip;
@@ -616,10 +685,19 @@ function renderPlan(planData) {
     }
 
     let html = `<div class="day-label">${d.day}${isDone ? ' <span style="color:var(--gold);">✓ Done</span>' : ""}</div>`;
-    d.exercises.forEach(ex => {
+    d.exercises.forEach((ex, exIndex) => {
+      if (!ex.setsDone) ex.setsDone = Array(parseSetCount(ex.detail)).fill(false);
       html += `<div class="exercise-row" onclick='openExerciseDetail(${JSON.stringify(ex.poseKey)}, ${JSON.stringify(ex.name)}, ${JSON.stringify(ex.detail)})'>
         <div class="exercise-icon">${exerciseImageHTML(ex.poseKey, 56)}</div>
-        <div><div class="exercise-name">${ex.name}</div><div class="exercise-detail">${ex.detail}</div></div>
+        <div style="flex:1;">
+          <div class="exercise-name">${ex.name}</div>
+          <div class="exercise-detail">${ex.detail}</div>
+          <div style="display:flex;gap:6px;margin-top:6px;" onclick="event.stopPropagation()">
+            ${ex.setsDone.map((done, setIdx) => `
+              <button onclick="toggleSet(${i}, ${exIndex}, ${setIdx})" style="width:26px;height:26px;border-radius:6px;border:1.5px solid ${done ? "var(--gold)" : "rgba(255,255,255,0.2)"};background:${done ? "var(--gold)" : "transparent"};color:${done ? "var(--ink)" : "var(--concrete)"};font-size:12px;font-weight:600;cursor:pointer;">${done ? "✓" : setIdx + 1}</button>
+            `).join("")}
+          </div>
+        </div>
       </div>`;
     });
     if (!isDone) {
@@ -657,13 +735,34 @@ async function passFailAnswer(dayIndex, passed) {
     const planData = currentProfile.plan;
     const plan = planData.weeks[planData.weeks.length - 1];
     plan.completed[dayIndex] = true;
-    await supabaseClient.from("profiles").update({ plan: planData }).eq("id", currentUser.id);
-    currentProfile = { ...currentProfile, plan: planData };
+
+    const { streak, lastActiveDate } = updateStreak();
+
+    await supabaseClient.from("profiles").update({
+      plan: planData,
+      streak: streak,
+      last_active_date: lastActiveDate,
+    }).eq("id", currentUser.id);
+    currentProfile = { ...currentProfile, plan: planData, streak: streak, last_active_date: lastActiveDate };
     closeExerciseDetail();
     renderPlan(planData);
   } else {
     showFailChoices(dayIndex);
   }
+}
+
+function updateStreak() {
+  const today = new Date().toISOString().slice(0, 10);
+  const last = currentProfile.last_active_date;
+  let streak = currentProfile.streak || 0;
+
+  if (last === today) {
+    // already logged today, no change
+  } else {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    streak = last === yesterday ? streak + 1 : 1;
+  }
+  return { streak, lastActiveDate: today };
 }
 
 function showFailChoices(dayIndex) {
