@@ -209,6 +209,34 @@ const POSES = {
 };
 const POSE_KEYS = Object.keys(POSES).concat(["rest"]).join(", ");
 
+// One custom "Start / Peak / Return" 3-step diagram image per exercise.
+// This same image is shown small as the card thumbnail, and large when tapped to expand.
+// Paste your ImgBB direct image links below — leave "" to show a placeholder until ready.
+const EXERCISE_IMAGES = {
+  wallpushup: "https://i.ibb.co/CKdyP8t8/13-B8-D0-BD-15-E2-4-D46-B716-4558-D70-EE913.png",
+  pushup: "https://i.ibb.co/39RSfydk/0-B14-EE0-B-0545-4-D5-C-8-A61-0-B5714-CEF3-AC.png",
+  plank: "https://i.ibb.co/fYTt4Kf5/669127-E6-FF7-D-4225-9478-5-AAD466731-E1.png",
+  squat: "https://i.ibb.co/Y4Q6ZMpr/946062-C3-B087-4-F1-D-9950-F8339604-EE8-F.png",
+  wallsit: "https://i.ibb.co/PvRqCn9w/E6-FED40-F-37-DD-42-DC-A4-C6-B9955-A31-F34-D.png",
+  deadhang: "https://i.ibb.co/Zp4qKbLw/BE0-E029-B-4-E3-E-4330-A570-673140-BA8908.png",
+  negativepullup: "https://i.ibb.co/rRBhdLCv/D9-C56-DD0-4-F4-A-4938-989-A-B95-B604-FDAB4.png",
+  pullup: "https://i.ibb.co/LdWqqd3p/E44-F73-F2-0-DA8-4-ECB-8-CC0-7-FBF90-D073-F9.png",
+  handstand: "https://i.ibb.co/fVdT4MN1/B76-D0-B9-B-F937-4892-BAB2-AFB02-BD7-D632.png",
+  superman: "https://i.ibb.co/pvgWSxSx/7-C23-C89-F-A537-4-F3-C-B3-D2-00-DFD7-B73-E9-C.png",
+  bridge: "https://i.ibb.co/Y4DdcjMk/B1-B22-A53-4-EDF-4573-ABF9-2647539-CE47-D.png",
+  jumpingjack: "https://i.ibb.co/K8763KX/EBDAA815-5030-4197-9-EA1-338919857086.png",
+  rest: "",
+};
+
+function exerciseImageHTML(poseKey, size) {
+  const url = EXERCISE_IMAGES[poseKey];
+  if (url) {
+    return `<img src="${url}" alt="${poseKey} step diagram" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:6px;display:block;" />`;
+  }
+  const fontSize = Math.max(9, size * 0.11);
+  return `<div style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;color:var(--concrete);font-family:'IBM Plex Mono',monospace;font-size:${fontSize}px;text-align:center;line-height:1.3;border:1px dashed rgba(255,255,255,0.2);border-radius:6px;box-sizing:border-box;">Diagram<br/>coming soon</div>`;
+}
+
 // --- Animation engine for rep-based poses ---
 let animIcons = [];
 let iconCounter = 0;
@@ -471,25 +499,19 @@ function stickFigureSVG(pose, size, color, id, thick) {
 }
 
 function openExerciseDetail(poseKey, name, detail) {
-  const poseDef = POSES[poseKey];
   const container = document.getElementById("detail-overlay-container");
-  const iconId = "detail-icon-" + (iconCounter++);
-  const figureHTML = poseDef
-    ? stickFigureSVG(poseKey, 220, GOLD, iconId, true)
-    : `<div style="font-family:'IBM Plex Mono',monospace;font-size:60px;color:${GOLD};padding:40px 0;">zzz</div>`;
+  const figureHTML = exerciseImageHTML(poseKey, 260);
   container.innerHTML = `
     <div class="detail-overlay" onclick="closeExerciseDetail(event)">
       <div class="detail-card" onclick="event.stopPropagation()">
         <button class="detail-close" onclick="closeExerciseDetail()">✕</button>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--gold);margin-bottom:8px;">START · PEAK · RETURN</div>
         <div class="detail-figure">${figureHTML}</div>
         <div class="detail-name">${name}</div>
         <div class="detail-detail">${detail}</div>
       </div>
     </div>
   `;
-  if (poseDef && poseDef.pose2) {
-    animIcons.push({ id: iconId, poseA: poseDef, poseB: poseDef.pose2, phase: 0 });
-  }
 }
 
 function closeExerciseDetail(event) {
@@ -595,15 +617,10 @@ function renderPlan(planData) {
 
     let html = `<div class="day-label">${d.day}${isDone ? ' <span style="color:var(--gold);">✓ Done</span>' : ""}</div>`;
     d.exercises.forEach(ex => {
-      const iconId = "icon-" + (iconCounter++);
       html += `<div class="exercise-row" onclick='openExerciseDetail(${JSON.stringify(ex.poseKey)}, ${JSON.stringify(ex.name)}, ${JSON.stringify(ex.detail)})'>
-        <div class="exercise-icon">${stickFigureSVG(ex.poseKey, 56, GOLD, iconId)}</div>
+        <div class="exercise-icon">${exerciseImageHTML(ex.poseKey, 56)}</div>
         <div><div class="exercise-name">${ex.name}</div><div class="exercise-detail">${ex.detail}</div></div>
       </div>`;
-      const poseDef = POSES[ex.poseKey];
-      if (poseDef && poseDef.pose2) {
-        animIcons.push({ id: iconId, poseA: poseDef, poseB: poseDef.pose2, phase: Math.random() * Math.PI * 2 });
-      }
     });
     if (!isDone) {
       html += `<button class="btn-outline" style="margin-top:6px;margin-bottom:0;" onclick="openPassFail(${i})">Mark ${d.day} complete</button>`;
