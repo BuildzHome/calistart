@@ -503,9 +503,31 @@ function stickFigureSVG(pose, size, color, id, thick) {
   return svg;
 }
 
+const EXERCISE_TIPS = {
+  wallpushup: ["Keep a straight line from head to heels", "Hands slightly wider than shoulders", "Lower your chest toward the wall with control"],
+  pushup: ["Keep your core tight, hips level with shoulders", "Hands under shoulders, elbows at roughly 45°", "Lower until your chest nearly touches the floor"],
+  plank: ["Keep a straight line from head to heels", "Squeeze glutes and brace your core", "Don't let your hips sag or pike up"],
+  squat: ["Keep your chest up, weight in your heels", "Knees track over your toes, not caving in", "Go as low as comfortable with control"],
+  wallsit: ["Keep your back flat against the wall", "Aim for roughly a 90° angle at the knees", "Keep weight in your heels, not your toes"],
+  deadhang: ["Let your shoulders relax first, then engage", "Keep a light, steady grip", "Hang straight — avoid swinging"],
+  negativepullup: ["Start at the top, chin over the bar", "Lower yourself as slowly as you can control", "Keep shoulders engaged, not shrugged up"],
+  pullup: ["Pull your elbows down and back, not just up", "Keep your core braced, avoid swinging", "Get your chin fully over the bar each rep"],
+  handstand: ["Stack your shoulders directly over your wrists", "Squeeze glutes and brace your core", "Keep breathing steadily — don't hold your breath"],
+  superman: ["Lift arms and legs together, not just one side", "Squeeze glutes and lower back gently", "Keep your neck neutral, don't crane upward"],
+  bridge: ["Push through your heels, not your toes", "Squeeze your glutes at the top", "Keep knees pointing forward, not flaring out"],
+  jumpingjack: ["Land softly through the balls of your feet", "Keep a slight bend in your knees", "Keep your core engaged throughout"],
+  rest: [],
+};
+
 function openExerciseDetail(poseKey, name, detail) {
   const container = document.getElementById("detail-overlay-container");
   const figureHTML = exerciseImageHTML(poseKey, 260);
+  const tips = EXERCISE_TIPS[poseKey] || [];
+  const tipsHTML = tips.length
+    ? `<div style="text-align:left;margin-top:14px;">
+        ${tips.map(t => `<div style="display:flex;gap:8px;font-size:13.5px;color:var(--chalk);margin-bottom:6px;"><span style="color:var(--gold);">•</span><span>${t}</span></div>`).join("")}
+      </div>`
+    : "";
   container.innerHTML = `
     <div class="detail-overlay" onclick="closeExerciseDetail(event)">
       <div class="detail-card" onclick="event.stopPropagation()">
@@ -514,6 +536,7 @@ function openExerciseDetail(poseKey, name, detail) {
         <div class="detail-figure">${figureHTML}</div>
         <div class="detail-name">${name}</div>
         <div class="detail-detail">${detail}</div>
+        ${tipsHTML}
       </div>
     </div>
   `;
