@@ -129,10 +129,8 @@
 
   <!-- PLAN -->
   <div class="screen" id="screen-plan">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-      <div class="eyebrow" id="plan-eyebrow" style="margin-bottom:0;">FREE 7-DAY PLAN</div>
-      <div id="streak-display" style="font-family:'Oswald',sans-serif;font-size:14px;color:var(--gold);"></div>
-    </div>
+    <div id="dashboard-banner" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px 18px;margin-bottom:22px;display:flex;justify-content:space-between;gap:10px;"></div>
+    <div class="eyebrow" id="plan-eyebrow">FREE 7-DAY PLAN</div>
     <p class="plan-intro" id="plan-intro"></p>
     <div id="plan-days"></div>
     <div class="safety-note"><strong>Safety note: </strong><span id="safety-tip"></span></div>
@@ -623,14 +621,11 @@ async function toggleSet(dayIndex, exIndex, setIdx) {
   const planData = currentProfile.plan;
   const plan = planData.weeks[planData.weeks.length - 1];
   const ex = plan.days[dayIndex].exercises[exIndex];
-  const turningOn = !ex.setsDone[setIdx];
-  ex.setsDone[setIdx] = turningOn;
+  ex.setsDone[setIdx] = !ex.setsDone[setIdx];
 
   await supabaseClient.from("profiles").update({ plan: planData }).eq("id", currentUser.id);
   currentProfile = { ...currentProfile, plan: planData };
   renderPlan(planData);
-
-  if (turningOn) startRestTimer(60);
 }
 
 function startRestTimer(seconds) {
@@ -662,17 +657,37 @@ function renderPlan(planData) {
   if (!plan.completed) plan.completed = plan.days.map(() => false);
 
   document.getElementById("plan-eyebrow").textContent = weeks.length > 1 ? "YOUR PROGRAM" : "FREE 7-DAY PLAN";
-  const streakVal = (currentProfile && currentProfile.streak) || 0;
-  document.getElementById("streak-display").textContent = streakVal > 0 ? `🔥 ${streakVal} day streak` : "";
   document.getElementById("plan-intro").textContent =
     (weeks.length > 1 ? `Week ${plan.weekNumber} — ` : "") + plan.intro;
   document.getElementById("safety-tip").textContent = plan.safetyTip;
+
+  // Dashboard banner
+  const streakVal = (currentProfile && currentProfile.streak) || 0;
+  const totalCompleted = weeks.reduce((sum, w) => sum + (w.completed ? w.completed.filter(Boolean).length : 0), 0);
+  const totalProgramDays = PROGRAM_WEEK_CAP * 7;
+  const dayOfProgram = Math.min(totalCompleted, totalProgramDays);
+  document.getElementById("dashboard-banner").innerHTML = `
+    <div style="text-align:center;flex:1;">
+      <div style="font-size:20px;">${streakVal > 0 ? "🔥 " + streakVal : "—"}</div>
+      <div style="font-size:10px;color:var(--concrete);letter-spacing:0.5px;">DAY STREAK</div>
+    </div>
+    <div style="text-align:center;flex:1;border-left:1px solid rgba(255,255,255,0.1);border-right:1px solid rgba(255,255,255,0.1);">
+      <div style="font-size:20px;color:var(--gold);">${totalCompleted}</div>
+      <div style="font-size:10px;color:var(--concrete);letter-spacing:0.5px;">WORKOUTS DONE</div>
+    </div>
+    <div style="text-align:center;flex:1;">
+      <div style="font-size:20px;color:var(--gold);">${dayOfProgram}/${totalProgramDays}</div>
+      <div style="font-size:10px;color:var(--concrete);letter-spacing:0.5px;">PROGRAM PROGRESS</div>
+    </div>
+  `;
+
   const daysEl = document.getElementById("plan-days");
   daysEl.innerHTML = "";
 
   plan.days.forEach((d, i) => {
     const isDone = plan.completed[i];
     const isUnlocked = i === 0 || plan.completed[i - 1];
+    const isRestDay = d.exercises.some(ex => ex.poseKey === "rest");
     const card = document.createElement("div");
     card.className = "day-card";
 
@@ -685,21 +700,31 @@ function renderPlan(planData) {
     }
 
     let html = `<div class="day-label">${d.day}${isDone ? ' <span style="color:var(--gold);">✓ Done</span>' : ""}</div>`;
-    d.exercises.forEach((ex, exIndex) => {
-      if (!ex.setsDone) ex.setsDone = Array(parseSetCount(ex.detail)).fill(false);
-      html += `<div class="exercise-row" onclick='openExerciseDetail(${JSON.stringify(ex.poseKey)}, ${JSON.stringify(ex.name)}, ${JSON.stringify(ex.detail)})'>
-        <div class="exercise-icon">${exerciseImageHTML(ex.poseKey, 56)}</div>
-        <div style="flex:1;">
-          <div class="exercise-name">${ex.name}</div>
-          <div class="exercise-detail">${ex.detail}</div>
-          <div style="display:flex;gap:6px;margin-top:6px;" onclick="event.stopPropagation()">
-            ${ex.setsDone.map((done, setIdx) => `
-              <button onclick="toggleSet(${i}, ${exIndex}, ${setIdx})" style="width:26px;height:26px;border-radius:6px;border:1.5px solid ${done ? "var(--gold)" : "rgba(255,255,255,0.2)"};background:${done ? "var(--gold)" : "transparent"};color:${done ? "var(--ink)" : "var(--concrete)"};font-size:12px;font-weight:600;cursor:pointer;">${done ? "✓" : setIdx + 1}</button>
-            `).join("")}
-          </div>
-        </div>
+
+    if (isRestDay) {
+      html += `<div style="text-align:center;padding:16px 0;">
+        <div style="font-size:36px;margin-bottom:8px;">💤</div>
+        <p style="color:var(--concrete);font-size:13px;">Rest day — let your body recover. Light stretching is fine, no training needed.</p>
       </div>`;
-    });
+    } else {
+      d.exercises.forEach((ex, exIndex) => {
+        if (!ex.setsDone) ex.setsDone = Array(parseSetCount(ex.detail)).fill(false);
+        html += `<div class="exercise-row" onclick='openExerciseDetail(${JSON.stringify(ex.poseKey)}, ${JSON.stringify(ex.name)}, ${JSON.stringify(ex.detail)})'>
+          <div class="exercise-icon">${exerciseImageHTML(ex.poseKey, 56)}</div>
+          <div style="flex:1;">
+            <div class="exercise-name">${ex.name}</div>
+            <div class="exercise-detail">${ex.detail}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center;" onclick="event.stopPropagation()">
+              ${ex.setsDone.map((done, setIdx) => `
+                <button onclick="toggleSet(${i}, ${exIndex}, ${setIdx})" style="padding:6px 10px;border-radius:6px;border:1.5px solid ${done ? "var(--gold)" : "rgba(255,255,255,0.2)"};background:${done ? "var(--gold)" : "transparent"};color:${done ? "var(--ink)" : "var(--chalk)"};font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">${done ? "✓ " : ""}Set ${setIdx + 1}</button>
+              `).join("")}
+              <button onclick="startRestTimer(60)" style="padding:6px 10px;border-radius:6px;border:1.5px solid rgba(255,255,255,0.15);background:transparent;color:var(--concrete);font-size:12px;cursor:pointer;white-space:nowrap;">⏱️ Start 60s Rest</button>
+            </div>
+          </div>
+        </div>`;
+      });
+    }
+
     if (!isDone) {
       html += `<button class="btn-outline" style="margin-top:6px;margin-bottom:0;" onclick="openPassFail(${i})">Mark ${d.day} complete</button>`;
     }
