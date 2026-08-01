@@ -47,6 +47,8 @@
   .center { text-align: center; padding-top: 64px; }
   .spinner { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.15); border-top-color: var(--gold); border-radius: 50%; margin: 0 auto 20px; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeIn 0.25s ease-out; }
   .plan-intro { font-size: 14.5px; line-height: 1.6; margin-bottom: 20px; }
   .day-card { margin-bottom: 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px 16px; }
   .day-label { font-family: 'Oswald', sans-serif; font-size: 13px; letter-spacing: 1px; color: var(--gold); margin-bottom: 10px; text-transform: uppercase; }
@@ -520,21 +522,23 @@ const EXERCISE_TIPS = {
   rest: [],
 };
 
-function openExerciseDetail(poseKey, name, detail) {
+function openExerciseDetail(poseKey, name, detail, isScaled) {
   const container = document.getElementById("detail-overlay-container");
-  const figureHTML = exerciseImageHTML(poseKey, 260);
   const tips = EXERCISE_TIPS[poseKey] || [];
   const tipsHTML = tips.length
     ? `<div style="text-align:left;margin-top:14px;">
         ${tips.map(t => `<div style="display:flex;gap:8px;font-size:13.5px;color:var(--chalk);margin-bottom:6px;"><span style="color:var(--gold);">•</span><span>${t}</span></div>`).join("")}
       </div>`
     : "";
+  const topBlock = isScaled
+    ? `<div style="display:inline-block;background:rgba(227,167,58,0.15);border:1px solid var(--gold);color:var(--gold);font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;margin-bottom:14px;">⚡ Scaled for Form &amp; Progress</div>`
+    : `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--gold);margin-bottom:8px;">START · PEAK · RETURN</div>
+       <div class="detail-figure">${exerciseImageHTML(poseKey, 260)}</div>`;
   container.innerHTML = `
     <div class="detail-overlay" onclick="closeExerciseDetail(event)">
-      <div class="detail-card" onclick="event.stopPropagation()">
+      <div class="detail-card fade-in" onclick="event.stopPropagation()">
         <button class="detail-close" onclick="closeExerciseDetail()">✕</button>
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--gold);margin-bottom:8px;">START · PEAK · RETURN</div>
-        <div class="detail-figure">${figureHTML}</div>
+        ${topBlock}
         <div class="detail-name">${name}</div>
         <div class="detail-detail">${detail}</div>
         ${tipsHTML}
@@ -740,9 +744,14 @@ function renderPlan(planData) {
     } else {
       d.exercises.forEach((ex, exIndex) => {
         if (!ex.setsDone) ex.setsDone = Array(parseSetCount(ex.detail)).fill(false);
-        html += `<div class="exercise-row" onclick='openExerciseDetail(${JSON.stringify(ex.poseKey)}, ${JSON.stringify(ex.name)}, ${JSON.stringify(ex.detail)})'>
-          <div class="exercise-icon">${exerciseImageHTML(ex.poseKey, 56)}</div>
+        const scaledBadge = ex.isScaled
+          ? `<div style="display:inline-block;background:rgba(227,167,58,0.15);border:1px solid var(--gold);color:var(--gold);font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;margin-bottom:6px;">⚡ Scaled for Form &amp; Progress</div><br/>`
+          : "";
+        const iconBlock = ex.isScaled ? "" : `<div class="exercise-icon">${exerciseImageHTML(ex.poseKey, 56)}</div>`;
+        html += `<div class="exercise-row fade-in" onclick='openExerciseDetail(${JSON.stringify(ex.poseKey)}, ${JSON.stringify(ex.name)}, ${JSON.stringify(ex.detail)}, ${!!ex.isScaled})'>
+          ${iconBlock}
           <div style="flex:1;">
+            ${scaledBadge}
             <div class="exercise-name">${ex.name}</div>
             <div class="exercise-detail">${ex.detail}</div>
             <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center;" onclick="event.stopPropagation()">
@@ -857,7 +866,7 @@ async function switchToEasierDrill(dayIndex) {
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "Unknown error");
 
-    plan.days[dayIndex] = { day: day.day, exercises: data.exercises };
+    plan.days[dayIndex] = { day: day.day, exercises: data.exercises.map(ex => ({ ...ex, isScaled: true })) };
     await supabaseClient.from("profiles").update({ plan: planData }).eq("id", currentUser.id);
     currentProfile = { ...currentProfile, plan: planData };
     closeExerciseDetail();
