@@ -441,6 +441,7 @@ async function getMaintenanceWeek() {
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "Unknown error");
+    data.days = relabelDays(data.days, planData.weeks.length + 1);
 
     planData.weeks.push({ weekNumber: planData.weeks.length + 1, ...data });
     planData.maintenanceMode = true;
@@ -546,6 +547,11 @@ function closeExerciseDetail(event) {
   document.getElementById("detail-overlay-container").innerHTML = "";
 }
 
+function relabelDays(days, weekNumber) {
+  const offset = (weekNumber - 1) * 7;
+  return days.map((d, idx) => ({ ...d, day: `Day ${offset + idx + 1}` }));
+}
+
 async function generatePlan() {
   document.getElementById("intake-error").innerHTML = "";
   goTo("loading");
@@ -561,6 +567,7 @@ async function generatePlan() {
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "Unknown error");
+    data.days = relabelDays(data.days, 1);
 
     const planData = {
       goalLabel, limitationLabel, equipmentLabel,
@@ -606,6 +613,7 @@ async function getNextWeek() {
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "Unknown error");
+    data.days = relabelDays(data.days, nextWeekNumber);
 
     planData.weeks.push({ weekNumber: nextWeekNumber, ...data });
     await supabaseClient.from("profiles").update({ plan: planData }).eq("id", currentUser.id);
