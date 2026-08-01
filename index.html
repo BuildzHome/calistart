@@ -736,6 +736,11 @@ function renderPlan(planData) {
 
     let html = `<div class="day-label">${d.day}${isDone ? ' <span style="color:var(--gold);">✓ Done</span>' : ""}</div>`;
 
+    const hasScaled = d.exercises.some(ex => ex.isScaled);
+    if (hasScaled) {
+      html += `<div style="background:rgba(227,167,58,0.12);border:1px solid var(--gold);color:var(--gold);font-size:12.5px;font-weight:600;padding:8px 12px;border-radius:8px;margin-bottom:12px;">⚡ Workout Scaled for Form &amp; Progress</div>`;
+    }
+
     if (isRestDay) {
       html += `<div style="text-align:center;padding:16px 0;">
         <div style="font-size:36px;margin-bottom:8px;">💤</div>
@@ -744,14 +749,10 @@ function renderPlan(planData) {
     } else {
       d.exercises.forEach((ex, exIndex) => {
         if (!ex.setsDone) ex.setsDone = Array(parseSetCount(ex.detail)).fill(false);
-        const scaledBadge = ex.isScaled
-          ? `<div style="display:inline-block;background:rgba(227,167,58,0.15);border:1px solid var(--gold);color:var(--gold);font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;margin-bottom:6px;">⚡ Scaled for Form &amp; Progress</div><br/>`
-          : "";
         const iconBlock = ex.isScaled ? "" : `<div class="exercise-icon">${exerciseImageHTML(ex.poseKey, 56)}</div>`;
         html += `<div class="exercise-row fade-in" onclick='openExerciseDetail(${JSON.stringify(ex.poseKey)}, ${JSON.stringify(ex.name)}, ${JSON.stringify(ex.detail)}, ${!!ex.isScaled})'>
           ${iconBlock}
           <div style="flex:1;">
-            ${scaledBadge}
             <div class="exercise-name">${ex.name}</div>
             <div class="exercise-detail">${ex.detail}</div>
             <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center;" onclick="event.stopPropagation()">
