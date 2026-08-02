@@ -38,7 +38,7 @@ Include 7 days. Use 2-3 exercises per day, fewer on rest days (use poseKey "rest
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
-        max_tokens: 1400,
+        max_tokens: 3000,
         messages: [{ role: "user", content: prompt }],
       }),
     });
