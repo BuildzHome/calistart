@@ -344,6 +344,20 @@ async function signInWithGoogle() {
   });
 }
 
+function showErrorModal(message) {
+  const container = document.getElementById("detail-overlay-container");
+  container.innerHTML = `
+    <div class="detail-overlay" onclick="closeExerciseDetail(event)">
+      <div class="detail-card fade-in" onclick="event.stopPropagation()">
+        <button class="detail-close" onclick="closeExerciseDetail()">✕</button>
+        <div class="detail-name" style="margin-top:10px;">Something went wrong</div>
+        <p style="color:var(--concrete);font-size:13.5px;margin-bottom:16px;">${message}</p>
+        <button class="btn-primary" onclick="closeExerciseDetail()">OK</button>
+      </div>
+    </div>
+  `;
+}
+
 async function startCheckout() {
   const btn = document.getElementById("btn-main-cta");
   btn.disabled = true;
@@ -358,7 +372,7 @@ async function startCheckout() {
     if (!res.ok || data.error) throw new Error(data.error || "Unknown error");
     window.location.href = data.url;
   } catch (e) {
-    alert("Debug error: " + e.message);
+    showErrorModal("Please try again in a moment — this sometimes happens if the response was cut short. (" + e.message + ")");
     btn.disabled = false;
     updateLandingCTA();
   }
@@ -451,7 +465,7 @@ async function getMaintenanceWeek() {
     currentProfile = { ...currentProfile, plan: planData };
     renderPlan(planData);
   } catch (e) {
-    alert("Debug error: " + e.message);
+    showErrorModal("Please try again in a moment — this sometimes happens if the response was cut short. (" + e.message + ")");
     if (btn) { btn.disabled = false; btn.textContent = "Get maintenance week"; }
   }
 }
@@ -624,7 +638,7 @@ async function getNextWeek() {
     currentProfile = { ...currentProfile, plan: planData };
     renderPlan(planData);
   } catch (e) {
-    alert("Debug error: " + e.message);
+    showErrorModal("Please try again in a moment — this sometimes happens if the response was cut short. (" + e.message + ")");
     if (btn) { btn.disabled = false; btn.textContent = "Get next week's plan"; }
   }
 }
