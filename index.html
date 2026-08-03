@@ -156,9 +156,12 @@
 </div>
 
 <div id="detail-overlay-container"></div>
-<div id="rest-timer-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--rust);color:var(--chalk);padding:14px 20px;align-items:center;justify-content:space-between;z-index:200;font-family:'Oswald',sans-serif;">
+<div id="rest-timer-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--rust);color:var(--chalk);padding:14px 20px;align-items:center;justify-content:space-between;z-index:200;font-family:'Oswald',sans-serif;gap:10px;">
   <span id="rest-timer-text" style="font-size:15px;letter-spacing:1px;">Rest: 60s</span>
-  <button onclick="skipRestTimer()" style="background:rgba(0,0,0,0.2);border:none;color:var(--chalk);padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;">Skip</button>
+  <div style="display:flex;gap:8px;">
+    <button onclick="addRestTime(15)" style="background:rgba(0,0,0,0.2);border:none;color:var(--chalk);padding:6px 12px;border-radius:6px;font-size:13px;cursor:pointer;">+15s</button>
+    <button onclick="skipRestTimer()" style="background:rgba(0,0,0,0.2);border:none;color:var(--chalk);padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;">Skip Rest</button>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -652,47 +655,66 @@ let audioCtx = null;
 function playBeep() {
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.5);
+    const playTone = (startTime) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = "square";
+      osc.frequency.value = 1400;
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(1.0, startTime + 0.01);
+      gain.gain.setValueAtTime(1.0, startTime + 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.22);
+      osc.start(startTime);
+      osc.stop(startTime + 0.22);
+    };
+    const now = audioCtx.currentTime;
+    playTone(now);
+    playTone(now + 0.28);
   } catch (e) {}
 }
 
 let restTimerInterval = null;
+let restTimerRemaining = 0;
 
 async function toggleSet(dayIndex, exIndex, setIdx) {
   const planData = currentProfile.plan;
   const plan = planData.weeks[planData.weeks.length - 1];
   const ex = plan.days[dayIndex].exercises[exIndex];
-  ex.setsDone[setIdx] = !ex.setsDone[setIdx];
+  const turningOn = !ex.setsDone[setIdx];
+  ex.setsDone[setIdx] = turningOn;
 
   await supabaseClient.from("profiles").update({ plan: planData }).eq("id", currentUser.id);
   currentProfile = { ...currentProfile, plan: planData };
   renderPlan(planData);
+
+  if (turningOn) startRestTimer(60);
 }
 
 function startRestTimer(seconds) {
   clearInterval(restTimerInterval);
   const bar = document.getElementById("rest-timer-bar");
-  let remaining = seconds;
+  restTimerRemaining = seconds;
   bar.style.display = "flex";
-  bar.querySelector("#rest-timer-text").textContent = `Rest: ${remaining}s`;
+  bar.querySelector("#rest-timer-text").textContent = `Rest: ${restTimerRemaining}s`;
   restTimerInterval = setInterval(() => {
-    remaining -= 1;
-    if (remaining <= 0) {
+    restTimerRemaining -= 1;
+    if (restTimerRemaining <= 0) {
       clearInterval(restTimerInterval);
       playBeep();
       bar.style.display = "none";
     } else {
-      bar.querySelector("#rest-timer-text").textContent = `Rest: ${remaining}s`;
+      bar.querySelector("#rest-timer-text").textContent = `Rest: ${restTimerRemaining}s`;
     }
   }, 1000);
+}
+
+function addRestTime(extraSeconds) {
+  if (restTimerInterval) {
+    restTimerRemaining += extraSeconds;
+    document.getElementById("rest-timer-text").textContent = `Rest: ${restTimerRemaining}s`;
+  }
 }
 
 function skipRestTimer() {
@@ -773,7 +795,6 @@ function renderPlan(planData) {
               ${ex.setsDone.map((done, setIdx) => `
                 <button onclick="toggleSet(${i}, ${exIndex}, ${setIdx})" style="padding:6px 10px;border-radius:6px;border:1.5px solid ${done ? "var(--gold)" : "rgba(255,255,255,0.2)"};background:${done ? "var(--gold)" : "transparent"};color:${done ? "var(--ink)" : "var(--chalk)"};font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">${done ? "✓ " : ""}Set ${setIdx + 1}</button>
               `).join("")}
-              <button onclick="startRestTimer(60)" style="padding:6px 10px;border-radius:6px;border:1.5px solid rgba(255,255,255,0.15);background:transparent;color:var(--concrete);font-size:12px;cursor:pointer;white-space:nowrap;">⏱️ Start 60s Rest</button>
             </div>
           </div>
         </div>`;
