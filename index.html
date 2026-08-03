@@ -1009,6 +1009,28 @@ async function handleFileUpload(event) {
   analyzeImage(base64, file.type);
 }
 
+function playSuccessChime() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const playTone = (freq, startTime, duration) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.9, startTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+    const now = audioCtx.currentTime;
+    playTone(1046, now, 0.15);
+    playTone(1568, now + 0.13, 0.35);
+  } catch (e) {}
+}
+
 async function analyzeImage(base64, mediaType) {
   const resultEl = document.getElementById("photo-result");
   resultEl.innerHTML = `<div class="photo-result">Analyzing…</div>`;
@@ -1020,7 +1042,24 @@ async function analyzeImage(base64, mediaType) {
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "Unknown error");
-    resultEl.innerHTML = `<div class="photo-result">${data.result}</div>`;
+
+    if (!data.fullBodyVisible) {
+      resultEl.innerHTML = `<div class="photo-result" style="background:rgba(227,167,58,0.1);border-color:var(--gold);">
+        <strong style="color:var(--gold);">⚠️ Full body not visible</strong><br/>
+        <span style="font-size:13px;color:var(--concrete);">Move your phone back 2-3 meters so your whole body is in frame, then try again.</span>
+      </div>`;
+    } else if (data.formScore >= 80) {
+      playSuccessChime();
+      resultEl.innerHTML = `<div class="photo-result" style="background:rgba(80,180,100,0.12);border-color:#4CAF50;">
+        <strong style="color:#4CAF50;">🎉 PERFECT FORM! YOU NAILED IT!</strong><br/>
+        <span style="font-size:13.5px;">${data.positiveNote}</span>
+      </div>`;
+    } else {
+      resultEl.innerHTML = `<div class="photo-result">
+        <strong style="color:var(--rust);">🔴 Fix this first:</strong><br/>
+        <span style="font-size:14px;">${data.topFix}</span>
+      </div>`;
+    }
   } catch (e) {
     resultEl.innerHTML = `<div class="photo-result">Debug error: ${e.message}</div>`;
   }
