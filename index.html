@@ -48,6 +48,13 @@
   .spinner { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.15); border-top-color: var(--gold); border-radius: 50%; margin: 0 auto 20px; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .faq-item { border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; margin-bottom: 8px; overflow: hidden; background: rgba(255,255,255,0.02); }
+  .faq-item summary { padding: 13px 16px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; color: var(--chalk); list-style: none; display: flex; justify-content: space-between; align-items: center; }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary::after { content: "+"; color: var(--gold); font-size: 18px; }
+  .faq-item[open] summary::after { content: "−"; }
+  .faq-item .faq-answer { padding: 0 16px 14px; font-size: 13.5px; color: var(--concrete); line-height: 1.6; }
+  .faq-title { font-family: 'Oswald', sans-serif; font-size: 18px; text-transform: uppercase; margin-bottom: 12px; }
   .fade-in { animation: fadeIn 0.25s ease-out; }
   .plan-intro { font-size: 14.5px; line-height: 1.6; margin-bottom: 20px; }
   .day-card { margin-bottom: 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px 16px; }
@@ -137,20 +144,12 @@
     <div id="plan-days"></div>
     <div class="safety-note"><strong>Safety note: </strong><span id="safety-tip"></span></div>
 
-    <h3 class="section-title">Optional: Scan My Form with AI</h3>
-    <p class="section-lede">Totally optional — upload a photo, or use the self-timer if you're training alone.</p>
-    <div id="photo-choice-buttons">
-      <button class="btn-dashed" onclick="document.getElementById('photo-input').click()">+ Upload a photo</button>
-      <input type="file" accept="image/*" id="photo-input" style="display:none" onchange="handleFileUpload(event)">
-      <button class="btn-dashed" onclick="showTimerOptions()">+ Take a self-timer photo</button>
-    </div>
-    <div id="camera-area"></div>
-    <div id="photo-result"></div>
-
     <div class="divider" id="plan-subscribe-section">
       <p>Keep your plan updating as you train, plus unlimited form checks.</p>
       <button class="btn-primary" onclick="startCheckout()">Unlock Full Roadmap — £4.99</button>
     </div>
+
+    <div id="faq-section" style="margin-top:28px;"></div>
   </div>
 
 </div>
@@ -678,6 +677,21 @@ function playBeep() {
 let restTimerInterval = null;
 let restTimerRemaining = 0;
 
+const FORM_CHECK_QUESTIONS = {
+  wallpushup: "Did you keep a straight line from head to heels?",
+  pushup: "Did your hips stay level, no sagging?",
+  plank: "Did your hips stay level, not sagging or piking?",
+  squat: "Did your knees track over your toes?",
+  wallsit: "Was your back flat against the wall throughout?",
+  deadhang: "Did you avoid swinging or kicking?",
+  negativepullup: "Did you lower slowly and under control?",
+  pullup: "Did you get your chin fully over the bar?",
+  handstand: "Did you keep your core braced the whole time?",
+  superman: "Did you lift arms and legs together?",
+  bridge: "Did you squeeze your glutes at the top?",
+  jumpingjack: "Did you land softly each time?",
+};
+
 async function toggleSet(dayIndex, exIndex, setIdx) {
   const planData = currentProfile.plan;
   const plan = planData.weeks[planData.weeks.length - 1];
@@ -689,21 +703,45 @@ async function toggleSet(dayIndex, exIndex, setIdx) {
   currentProfile = { ...currentProfile, plan: planData };
   renderPlan(planData);
 
-  if (turningOn) startRestTimer(60);
+  if (turningOn) startRestTimer(60, ex.poseKey);
 }
 
-function startRestTimer(seconds) {
+function dismissFormCheck() {
+  const card = document.getElementById("form-check-card");
+  if (card) card.remove();
+}
+
+function startRestTimer(seconds, poseKey) {
   clearInterval(restTimerInterval);
   const bar = document.getElementById("rest-timer-bar");
   restTimerRemaining = seconds;
   bar.style.display = "flex";
   bar.querySelector("#rest-timer-text").textContent = `Rest: ${restTimerRemaining}s`;
+
+  dismissFormCheck();
+  const question = poseKey && FORM_CHECK_QUESTIONS[poseKey];
+  if (question) {
+    const card = document.createElement("div");
+    card.id = "form-check-card";
+    card.className = "fade-in";
+    card.style.cssText = "position:fixed;bottom:64px;left:16px;right:16px;background:var(--ink);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:14px 16px;z-index:199;max-width:420px;margin:0 auto;";
+    card.innerHTML = `
+      <p style="font-size:13px;color:var(--chalk);margin-bottom:10px;">${question}</p>
+      <div style="display:flex;gap:8px;">
+        <button onclick="dismissFormCheck()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:var(--chalk);font-size:13px;cursor:pointer;">👍 Perfect</button>
+        <button onclick="dismissFormCheck()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:var(--chalk);font-size:13px;cursor:pointer;">👎 Needs work</button>
+      </div>
+    `;
+    document.body.appendChild(card);
+  }
+
   restTimerInterval = setInterval(() => {
     restTimerRemaining -= 1;
     if (restTimerRemaining <= 0) {
       clearInterval(restTimerInterval);
       playBeep();
       bar.style.display = "none";
+      dismissFormCheck();
     } else {
       bar.querySelector("#rest-timer-text").textContent = `Rest: ${restTimerRemaining}s`;
     }
@@ -720,6 +758,7 @@ function addRestTime(extraSeconds) {
 function skipRestTimer() {
   clearInterval(restTimerInterval);
   document.getElementById("rest-timer-bar").style.display = "none";
+  dismissFormCheck();
 }
 
 function renderPlan(planData) {
@@ -810,6 +849,58 @@ function renderPlan(planData) {
 
   const allDaysDone = plan.completed.every(Boolean);
   updateSubscribeSectionVisibility(allDaysDone);
+  renderFAQ(planData, weeks.length);
+}
+
+function renderFAQ(planData, weekCount) {
+  const isSubscribed = currentProfile && currentProfile.subscribed;
+  const restDayCount = 7 - planData.weeks[planData.weeks.length - 1].days.filter(d => !d.exercises.some(ex => ex.poseKey === "rest")).length;
+
+  const faqs = [
+    {
+      q: "How long should each workout take?",
+      a: `Most days on your plan take around 15-25 minutes, depending on how much rest you take between sets. Nothing here is meant to be rushed — go at your own pace.`,
+    },
+    {
+      q: "Do I need any equipment for my plan?",
+      a: `Your plan is built specifically around: ${planData.equipmentLabel}. If that changes, generate a new plan through the intake questions and it'll adjust.`,
+    },
+    {
+      q: "What if an exercise feels too hard?",
+      a: `That's exactly what the pass/fail check on each day is for. If you answer "not quite," you can switch to an easier, scaled-down version of that day instantly — no shame in it, that's the system working as intended.${planData.limitationLabel && planData.limitationLabel !== "No limitations" ? ` Your plan already factors in: ${planData.limitationLabel}.` : ""}`,
+    },
+    {
+      q: "What are rest days for?",
+      a: `Rest days (marked with 💤) are built into your program${restDayCount > 0 ? ` — this week has ${restDayCount}` : ""}. Recovery is part of getting stronger, not a day off from progress — light stretching is fine, training isn't required.`,
+    },
+    {
+      q: "What if I miss a day?",
+      a: `No penalty — your days stay locked in the order you complete them, not by calendar date. Come back whenever you're ready and pick up where you left off. Your streak resets if you miss a full day, but your progress itself never does.`,
+    },
+  ];
+
+  if (!isSubscribed) {
+    faqs.push({
+      q: "How does the free trial work?",
+      a: `Your first 7 days are completely free. After that, a one-time payment of £4.99 unlocks the full ${PROGRAM_WEEK_CAP}-week program — no subscription, no recurring charge.`,
+    });
+  } else {
+    faqs.push({
+      q: "What happens after I finish the full program?",
+      a: `Once you complete week ${PROGRAM_WEEK_CAP}, you'll get a completion screen and can switch into maintenance mode — lighter weekly sessions to keep your progress sharp, for as long as you want.`,
+    });
+  }
+
+  const faqEl = document.getElementById("faq-section");
+  faqEl.innerHTML = `
+    <div class="faq-title">Questions about your plan</div>
+    ${faqs.map(f => `
+      <details class="faq-item">
+        <summary>${f.q}</summary>
+        <div class="faq-answer">${f.a}</div>
+      </details>
+    `).join("")}
+  `;
 }
 
 function openPassFail(dayIndex) {
@@ -909,159 +1000,6 @@ async function switchToEasierDrill(dayIndex) {
     renderPlan(planData);
   } catch (e) {
     container.innerHTML = `<div class="detail-overlay" onclick="closeExerciseDetail(event)"><div class="detail-card" onclick="event.stopPropagation()"><button class="detail-close" onclick="closeExerciseDetail()">✕</button><p class="error-text">Debug error: ${e.message}</p></div></div>`;
-  }
-}
-
-let cameraStream = null;
-
-function showTimerOptions() {
-  const area = document.getElementById("camera-area");
-  document.getElementById("photo-result").innerHTML = "";
-  area.innerHTML = `
-    <p class="section-lede">Choose a countdown:</p>
-    <div id="timer-choices"></div>
-  `;
-  const durations = [3, 5, 10, 15];
-  const container = document.getElementById("timer-choices");
-  durations.forEach(sec => {
-    const btn = document.createElement("button");
-    btn.className = "choice";
-    btn.textContent = sec + " seconds";
-    btn.onclick = () => startCamera(sec);
-    container.appendChild(btn);
-  });
-}
-
-let currentFacing = "environment";
-
-async function startCamera(duration) {
-  const area = document.getElementById("camera-area");
-  try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacing } });
-    area.innerHTML = `
-      <div class="camera-wrap">
-        <video id="camera-video" autoplay playsinline muted></video>
-        <div class="countdown-overlay" id="countdown-overlay" style="display:none;"></div>
-      </div>
-      <button class="btn-dashed" id="btn-flip-camera" onclick="flipCamera(${duration})">Switch to ${currentFacing === "environment" ? "front" : "back"} camera</button>
-      <button class="btn-primary" id="btn-start-timer">Start ${duration}s timer</button>
-    `;
-    const video = document.getElementById("camera-video");
-    video.srcObject = cameraStream;
-    document.getElementById("btn-start-timer").onclick = () => startCountdown(duration);
-  } catch (e) {
-    area.innerHTML = `<div class="photo-result">Couldn't access the camera: ${e.message}. Check your browser's camera permission for this site.</div>`;
-  }
-}
-
-function flipCamera(duration) {
-  if (cameraStream) {
-    cameraStream.getTracks().forEach(t => t.stop());
-    cameraStream = null;
-  }
-  currentFacing = currentFacing === "environment" ? "user" : "environment";
-  startCamera(duration);
-}
-
-function startCountdown(duration) {
-  const overlay = document.getElementById("countdown-overlay");
-  const startBtn = document.getElementById("btn-start-timer");
-  startBtn.style.display = "none";
-  overlay.style.display = "flex";
-  let count = duration;
-  overlay.textContent = count;
-  const interval = setInterval(() => {
-    count -= 1;
-    if (count > 0) {
-      overlay.textContent = count;
-    } else {
-      clearInterval(interval);
-      capturePhoto();
-    }
-  }, 1000);
-}
-
-async function capturePhoto() {
-  const video = document.getElementById("camera-video");
-  const canvas = document.createElement("canvas");
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext("2d").drawImage(video, 0, 0);
-  const base64 = canvas.toDataURL("image/jpeg").split(",")[1];
-
-  if (cameraStream) {
-    cameraStream.getTracks().forEach(t => t.stop());
-    cameraStream = null;
-  }
-  document.getElementById("camera-area").innerHTML = "";
-  analyzeImage(base64, "image/jpeg");
-}
-
-async function handleFileUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const base64 = await new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result.split(",")[1]);
-    r.onerror = () => reject(new Error("Read failed"));
-    r.readAsDataURL(file);
-  });
-  analyzeImage(base64, file.type);
-}
-
-function playSuccessChime() {
-  try {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const playTone = (freq, startTime, duration) => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0, startTime);
-      gain.gain.linearRampToValueAtTime(0.9, startTime + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-      osc.start(startTime);
-      osc.stop(startTime + duration);
-    };
-    const now = audioCtx.currentTime;
-    playTone(1046, now, 0.15);
-    playTone(1568, now + 0.13, 0.35);
-  } catch (e) {}
-}
-
-async function analyzeImage(base64, mediaType) {
-  const resultEl = document.getElementById("photo-result");
-  resultEl.innerHTML = `<div class="photo-result">Analyzing…</div>`;
-  try {
-    const res = await fetch("/api/formcheck", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageBase64: base64, mediaType }),
-    });
-    const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.error || "Unknown error");
-
-    if (!data.fullBodyVisible) {
-      resultEl.innerHTML = `<div class="photo-result" style="background:rgba(227,167,58,0.1);border-color:var(--gold);">
-        <strong style="color:var(--gold);">⚠️ Full body not visible</strong><br/>
-        <span style="font-size:13px;color:var(--concrete);">Move your phone back 2-3 meters so your whole body is in frame, then try again.</span>
-      </div>`;
-    } else if (data.formScore >= 80) {
-      playSuccessChime();
-      resultEl.innerHTML = `<div class="photo-result" style="background:rgba(80,180,100,0.12);border-color:#4CAF50;">
-        <strong style="color:#4CAF50;">🎉 PERFECT FORM! YOU NAILED IT!</strong><br/>
-        <span style="font-size:13.5px;">${data.positiveNote}</span>
-      </div>`;
-    } else {
-      resultEl.innerHTML = `<div class="photo-result">
-        <strong style="color:var(--rust);">🔴 Fix this first:</strong><br/>
-        <span style="font-size:14px;">${data.topFix}</span>
-      </div>`;
-    }
-  } catch (e) {
-    resultEl.innerHTML = `<div class="photo-result">Debug error: ${e.message}</div>`;
   }
 }
 </script>
