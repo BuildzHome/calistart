@@ -703,7 +703,7 @@ async function toggleSet(dayIndex, exIndex, setIdx) {
   currentProfile = { ...currentProfile, plan: planData };
   renderPlan(planData);
 
-  if (turningOn) startRestTimer(60, ex.poseKey);
+  if (turningOn) startRestTimer(60, setIdx === 0 ? ex.poseKey : null);
 }
 
 function dismissFormCheck() {
