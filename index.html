@@ -692,6 +692,9 @@ const FORM_CHECK_QUESTIONS = {
   jumpingjack: "Did you land softly each time?",
 };
 
+let workoutStartTime = null;
+let selectedDifficulty = null;
+
 async function toggleSet(dayIndex, exIndex, setIdx) {
   const planData = currentProfile.plan;
   const plan = planData.weeks[planData.weeks.length - 1];
@@ -699,11 +702,84 @@ async function toggleSet(dayIndex, exIndex, setIdx) {
   const turningOn = !ex.setsDone[setIdx];
   ex.setsDone[setIdx] = turningOn;
 
+  if (turningOn && !workoutStartTime) workoutStartTime = Date.now();
+
   await supabaseClient.from("profiles").update({ plan: planData }).eq("id", currentUser.id);
   currentProfile = { ...currentProfile, plan: planData };
   renderPlan(planData);
 
-  if (turningOn) startRestTimer(60, setIdx === 0 ? ex.poseKey : null);
+  if (!turningOn) return;
+
+  const day = plan.days[dayIndex];
+  const allSetsDone = day.exercises.every(e => e.setsDone.every(Boolean));
+
+  if (allSetsDone) {
+    showWorkoutCompleteModal(dayIndex);
+  } else {
+    startRestTimer(60, setIdx === 0 ? ex.poseKey : null);
+  }
+}
+
+function showWorkoutCompleteModal(dayIndex) {
+  const planData = currentProfile.plan;
+  const plan = planData.weeks[planData.weeks.length - 1];
+  const day = plan.days[dayIndex];
+  const totalSets = day.exercises.reduce((sum, e) => sum + e.setsDone.length, 0);
+  const elapsedMs = workoutStartTime ? Date.now() - workoutStartTime : 0;
+  const mins = Math.floor(elapsedMs / 60000);
+  const secs = Math.floor((elapsedMs % 60000) / 1000);
+  const timeStr = `${mins}m ${secs}s`;
+  selectedDifficulty = null;
+
+  const container = document.getElementById("detail-overlay-container");
+  container.innerHTML = `
+    <div class="detail-overlay" style="align-items:center;">
+      <div class="detail-card fade-in" style="max-width:400px;padding:32px 24px;">
+        <div style="font-size:44px;margin-bottom:6px;">🏆</div>
+        <div class="detail-name" style="font-size:26px;">Workout Complete!</div>
+        <div style="display:flex;justify-content:center;gap:24px;margin:18px 0;">
+          <div style="text-align:center;">
+            <div style="font-size:20px;color:var(--gold);font-family:'Oswald',sans-serif;">${timeStr}</div>
+            <div style="font-size:10px;color:var(--concrete);letter-spacing:0.5px;">TIME TAKEN</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:20px;color:var(--gold);font-family:'Oswald',sans-serif;">${totalSets}</div>
+            <div style="font-size:10px;color:var(--concrete);letter-spacing:0.5px;">SETS DONE</div>
+          </div>
+        </div>
+        <p style="color:var(--concrete);font-size:13.5px;margin-bottom:10px;">How did today feel?</p>
+        <div id="difficulty-buttons" style="display:flex;gap:8px;margin-bottom:22px;">
+          <button onclick="pickDifficulty('easy', this)" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.15);background:transparent;color:var(--chalk);font-size:13px;cursor:pointer;">🟢 Easy</button>
+          <button onclick="pickDifficulty('right', this)" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.15);background:transparent;color:var(--chalk);font-size:13px;cursor:pointer;">🟡 Just Right</button>
+          <button onclick="pickDifficulty('hard', this)" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.15);background:transparent;color:var(--chalk);font-size:13px;cursor:pointer;">🔴 Hard</button>
+        </div>
+        <button class="btn-primary" onclick="saveAndExitWorkout(${dayIndex})">Save &amp; Exit to Dashboard</button>
+      </div>
+    </div>
+  `;
+}
+
+function pickDifficulty(level, btn) {
+  selectedDifficulty = level;
+  document.querySelectorAll("#difficulty-buttons button").forEach(b => {
+    b.style.borderColor = "rgba(255,255,255,0.15)";
+    b.style.background = "transparent";
+  });
+  btn.style.borderColor = "var(--gold)";
+  btn.style.background = "rgba(227,167,58,0.12)";
+}
+
+async function saveAndExitWorkout(dayIndex) {
+  if (selectedDifficulty) {
+    const planData = currentProfile.plan;
+    const plan = planData.weeks[planData.weeks.length - 1];
+    plan.days[dayIndex].difficultyFelt = selectedDifficulty;
+    await supabaseClient.from("profiles").update({ plan: planData }).eq("id", currentUser.id);
+    currentProfile = { ...currentProfile, plan: planData };
+  }
+  workoutStartTime = null;
+  closeExerciseDetail();
+  openPassFail(dayIndex);
 }
 
 function dismissFormCheck() {
