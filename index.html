@@ -216,11 +216,9 @@ const POSES = {
   jumpingjack: { limbs: [[50,32,22,10],[50,32,78,10],[50,55,25,85],[50,55,75,85]], torso:[50,32,50,55], head:[50,20,9], groundY: 92, bends: [2,-2,2,-2],
     pose2: { limbs: [[50,32,40,50],[50,32,60,50],[50,55,45,90],[50,55,55,90]], torso:[50,32,50,55], head:[50,20,9] } },
 };
-const POSE_KEYS = Object.keys(POSES).concat(["rest"]).join(", ");
 
-// One custom "Start / Peak / Return" 3-step diagram image per exercise.
-// This same image is shown small as the card thumbnail, and large when tapped to expand.
-// Paste your ImgBB direct image links below — leave "" to show a placeholder until ready.
+// One custom "Start / Peak / Return" 3-step diagram image per exercise we have art for.
+// Matched by exercise NAME (not a fixed key list) — exercises without a match render text-only, no image box.
 const EXERCISE_IMAGES = {
   wallpushup: "https://i.ibb.co/CKdyP8t8/13-B8-D0-BD-15-E2-4-D46-B716-4558-D70-EE913.png",
   pushup: "https://i.ibb.co/39RSfydk/0-B14-EE0-B-0545-4-D5-C-8-A61-0-B5714-CEF3-AC.png",
@@ -234,16 +232,25 @@ const EXERCISE_IMAGES = {
   superman: "https://i.ibb.co/pvgWSxSx/7-C23-C89-F-A537-4-F3-C-B3-D2-00-DFD7-B73-E9-C.png",
   bridge: "https://i.ibb.co/Y4DdcjMk/B1-B22-A53-4-EDF-4573-ABF9-2647539-CE47-D.png",
   jumpingjack: "https://i.ibb.co/K8763KX/EBDAA815-5030-4197-9-EA1-338919857086.png",
-  rest: "",
 };
 
-function exerciseImageHTML(poseKey, size) {
-  const url = EXERCISE_IMAGES[poseKey];
-  if (url) {
-    return `<img src="${url}" alt="${poseKey} step diagram" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:6px;display:block;" />`;
+function slugify(name) {
+  return (name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function getImageForExercise(name) {
+  const slug = slugify(name);
+  if (EXERCISE_IMAGES[slug]) return EXERCISE_IMAGES[slug];
+  for (const key of Object.keys(EXERCISE_IMAGES)) {
+    if (slug.includes(key)) return EXERCISE_IMAGES[key];
   }
-  const fontSize = Math.max(9, size * 0.11);
-  return `<div style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;color:var(--concrete);font-family:'IBM Plex Mono',monospace;font-size:${fontSize}px;text-align:center;line-height:1.3;border:1px dashed rgba(255,255,255,0.2);border-radius:6px;box-sizing:border-box;">Diagram<br/>coming soon</div>`;
+  return null;
+}
+
+function exerciseImageHTML(name, size) {
+  const url = getImageForExercise(name);
+  if (!url) return "";
+  return `<img src="${url}" alt="${name} step diagram" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:6px;display:block;" />`;
 }
 
 // --- Animation engine for rep-based poses ---
@@ -451,7 +458,6 @@ async function getMaintenanceWeek() {
         goalLabel: planData.goalLabel,
         limitationLabel: planData.limitationLabel,
         equipmentLabel: planData.equipmentLabel,
-        poseKeys: POSE_KEYS,
         weekNumber: planData.weeks.length + 1,
         previousWeekSummary: summary,
         maintenance: true,
@@ -522,7 +528,7 @@ function stickFigureSVG(pose, size, color, id, thick) {
   return svg;
 }
 
-const EXERCISE_TIPS = {
+const EXERCISE_TIPS_FALLBACK = {
   wallpushup: ["Keep a straight line from head to heels", "Hands slightly wider than shoulders", "Lower your chest toward the wall with control"],
   pushup: ["Keep your core tight, hips level with shoulders", "Hands under shoulders, elbows at roughly 45°", "Lower until your chest nearly touches the floor"],
   plank: ["Keep a straight line from head to heels", "Squeeze glutes and brace your core", "Don't let your hips sag or pike up"],
@@ -535,21 +541,33 @@ const EXERCISE_TIPS = {
   superman: ["Lift arms and legs together, not just one side", "Squeeze glutes and lower back gently", "Keep your neck neutral, don't crane upward"],
   bridge: ["Push through your heels, not your toes", "Squeeze your glutes at the top", "Keep knees pointing forward, not flaring out"],
   jumpingjack: ["Land softly through the balls of your feet", "Keep a slight bend in your knees", "Keep your core engaged throughout"],
-  rest: [],
 };
 
-function openExerciseDetail(poseKey, name, detail, isScaled) {
+function getTipsForExercise(name, liveCues) {
+  if (liveCues && liveCues.length) return liveCues;
+  const slug = slugify(name);
+  if (EXERCISE_TIPS_FALLBACK[slug]) return EXERCISE_TIPS_FALLBACK[slug];
+  for (const key of Object.keys(EXERCISE_TIPS_FALLBACK)) {
+    if (slug.includes(key)) return EXERCISE_TIPS_FALLBACK[key];
+  }
+  return [];
+}
+
+function openExerciseDetail(name, detail, cues, isScaled) {
   const container = document.getElementById("detail-overlay-container");
-  const tips = EXERCISE_TIPS[poseKey] || [];
+  const tips = getTipsForExercise(name, cues);
   const tipsHTML = tips.length
     ? `<div style="text-align:left;margin-top:14px;">
         ${tips.map(t => `<div style="display:flex;gap:8px;font-size:13.5px;color:var(--chalk);margin-bottom:6px;"><span style="color:var(--gold);">•</span><span>${t}</span></div>`).join("")}
       </div>`
     : "";
+  const imageHTML = exerciseImageHTML(name, 260);
   const topBlock = isScaled
     ? `<div style="display:inline-block;background:rgba(227,167,58,0.15);border:1px solid var(--gold);color:var(--gold);font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;margin-bottom:14px;">⚡ Scaled for Form &amp; Progress</div>`
-    : `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--gold);margin-bottom:8px;">START · PEAK · RETURN</div>
-       <div class="detail-figure">${exerciseImageHTML(poseKey, 260)}</div>`;
+    : imageHTML
+    ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--gold);margin-bottom:8px;">START · PEAK · RETURN</div>
+       <div class="detail-figure">${imageHTML}</div>`
+    : "";
   container.innerHTML = `
     <div class="detail-overlay" onclick="closeExerciseDetail(event)">
       <div class="detail-card fade-in" onclick="event.stopPropagation()">
@@ -583,7 +601,6 @@ async function generatePlan() {
     const res = await fetch("/api/plan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ goalLabel, limitationLabel, equipmentLabel, poseKeys: POSE_KEYS, weekNumber: 1 }),
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "Unknown error");
@@ -626,7 +643,6 @@ async function getNextWeek() {
         goalLabel: planData.goalLabel,
         limitationLabel: planData.limitationLabel,
         equipmentLabel: planData.equipmentLabel,
-        poseKeys: POSE_KEYS,
         weekNumber: nextWeekNumber,
         previousWeekSummary: summary,
       }),
@@ -692,6 +708,15 @@ const FORM_CHECK_QUESTIONS = {
   jumpingjack: "Did you land softly each time?",
 };
 
+function getFormCheckQuestion(name) {
+  const slug = slugify(name);
+  if (FORM_CHECK_QUESTIONS[slug]) return FORM_CHECK_QUESTIONS[slug];
+  for (const key of Object.keys(FORM_CHECK_QUESTIONS)) {
+    if (slug.includes(key)) return FORM_CHECK_QUESTIONS[key];
+  }
+  return "Did that feel controlled and steady?";
+}
+
 let workoutStartTime = null;
 let selectedDifficulty = null;
 
@@ -716,7 +741,7 @@ async function toggleSet(dayIndex, exIndex, setIdx) {
   if (allSetsDone) {
     showWorkoutCompleteModal(dayIndex);
   } else {
-    startRestTimer(60, setIdx === 0 ? ex.poseKey : null);
+    startRestTimer(60, setIdx === 0 ? ex.name : null);
   }
 }
 
@@ -787,7 +812,7 @@ function dismissFormCheck() {
   if (card) card.remove();
 }
 
-function startRestTimer(seconds, poseKey) {
+function startRestTimer(seconds, exerciseName) {
   clearInterval(restTimerInterval);
   const bar = document.getElementById("rest-timer-bar");
   restTimerRemaining = seconds;
@@ -795,7 +820,7 @@ function startRestTimer(seconds, poseKey) {
   bar.querySelector("#rest-timer-text").textContent = `Rest: ${restTimerRemaining}s`;
 
   dismissFormCheck();
-  const question = poseKey && FORM_CHECK_QUESTIONS[poseKey];
+  const question = exerciseName && getFormCheckQuestion(exerciseName);
   if (question) {
     const card = document.createElement("div");
     card.id = "form-check-card";
@@ -873,7 +898,7 @@ function renderPlan(planData) {
   plan.days.forEach((d, i) => {
     const isDone = plan.completed[i];
     const isUnlocked = i === 0 || plan.completed[i - 1];
-    const isRestDay = d.exercises.some(ex => ex.poseKey === "rest");
+    const isRestDay = !!d.isRestDay;
     const card = document.createElement("div");
     card.className = "day-card";
 
@@ -900,8 +925,9 @@ function renderPlan(planData) {
     } else {
       d.exercises.forEach((ex, exIndex) => {
         if (!ex.setsDone) ex.setsDone = Array(parseSetCount(ex.detail)).fill(false);
-        const iconBlock = ex.isScaled ? "" : `<div class="exercise-icon">${exerciseImageHTML(ex.poseKey, 56)}</div>`;
-        html += `<div class="exercise-row fade-in" onclick='openExerciseDetail(${JSON.stringify(ex.poseKey)}, ${JSON.stringify(ex.name)}, ${JSON.stringify(ex.detail)}, ${!!ex.isScaled})'>
+        const iconUrl = getImageForExercise(ex.name);
+        const iconBlock = (ex.isScaled || !iconUrl) ? "" : `<div class="exercise-icon">${exerciseImageHTML(ex.name, 56)}</div>`;
+        html += `<div class="exercise-row fade-in" onclick='openExerciseDetail(${JSON.stringify(ex.name)}, ${JSON.stringify(ex.detail)}, ${JSON.stringify(ex.cues || [])}, ${!!ex.isScaled})'>
           ${iconBlock}
           <div style="flex:1;">
             <div class="exercise-name">${ex.name}</div>
@@ -930,7 +956,7 @@ function renderPlan(planData) {
 
 function renderFAQ(planData, weekCount) {
   const isSubscribed = currentProfile && currentProfile.subscribed;
-  const restDayCount = 7 - planData.weeks[planData.weeks.length - 1].days.filter(d => !d.exercises.some(ex => ex.poseKey === "rest")).length;
+  const restDayCount = planData.weeks[planData.weeks.length - 1].days.filter(d => d.isRestDay).length;
 
   const faqs = [
     {
@@ -1063,7 +1089,6 @@ async function switchToEasierDrill(dayIndex) {
         currentExercises: day.exercises,
         limitationLabel: planData.limitationLabel,
         equipmentLabel: planData.equipmentLabel,
-        poseKeys: POSE_KEYS,
       }),
     });
     const data = await res.json();
