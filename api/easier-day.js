@@ -4,7 +4,7 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const { currentExercises, limitationLabel, equipmentLabel, poseKeys } = req.body;
+  const { currentExercises, limitationLabel, equipmentLabel } = req.body;
 
   const exerciseList = currentExercises.map(e => `${e.name} (${e.detail})`).join(", ");
 
@@ -12,13 +12,12 @@ module.exports = async function handler(req, res) {
 Their limitation: ${limitationLabel}
 Equipment available: ${equipmentLabel}
 
-Give them an easier scale-down version of the SAME workout — same number of exercises. Every single exercise MUST be measurably easier than what's listed above: either a genuinely different, more assisted/regressed variation (e.g. wall walk → elevated pike hold on a chair/bed, full push-up → wall push-up, dead hang → assisted dead hang with feet on a chair), OR the same exercise with noticeably reduced reps/hold time (at least 30-40% less than before). Do NOT return the same exercise name with the same numbers as before — that is not acceptable. Prefer switching to a genuinely different, easier movement over just lowering numbers on the same one.
+Give them an easier scale-down version of the SAME workout — same number of exercises. Every single exercise MUST be measurably easier than what's listed above: either a genuinely different, more assisted/regressed variation from the correct progression pipeline (e.g. Incline Push-Up → Wall Push-Up, Negative Pull-Up → Dead Hang, Standard Push-Up → Knee Push-Up), OR the same exercise with noticeably reduced reps/hold time (at least 30-40% less than before). Do NOT return the same exercise name with the same numbers as before — that is not acceptable. Prefer switching to a genuinely different, easier movement over just lowering numbers on the same one.
 
 Return ONLY valid JSON, no markdown fences, no commentary, matching this exact shape:
 {
-  "exercises": [ { "name": "short exercise name", "detail": "sets/reps or duration", "poseKey": "one of: ${poseKeys}" } ]
-}
-Pick the closest matching poseKey from the provided list for each exercise — never invent a new key.`;
+  "exercises": [ { "name": "exact exercise name", "detail": "sets/reps or duration", "cues": ["short form cue 1", "short form cue 2"] } ]
+}`;
 
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
