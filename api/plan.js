@@ -12,23 +12,41 @@ module.exports = async function handler(req, res) {
     ? `\nThis is week ${weekNumber} of an ongoing program toward the same goal. Here is what they did last week:\n${previousWeekSummary}\n\nYou MUST make a concrete, noticeable increase from last week for every exercise that repeats — add at least 2-3 more reps, or at least 5-10 more seconds to any hold/duration, or add one extra set, OR move them to the next exercise in their goal pipeline if they've clearly mastered the current one. Do not repeat the exact same numbers as last week under any circumstance. State the specific improvement in the intro (e.g., "up from 5 to 8 reps", or "moving from Incline Push-Ups to Knee Push-Ups").`
     : "";
 
+  const phaseNum = maintenance ? 4 : Math.min(Math.max(weekNumber || 1, 1), 4);
+
   const pipelineGuide = `
-GOAL PIPELINE — choose exercises progressing along the correct pipeline for their stated goal, picking the appropriate stage for week ${weekNumber || 1} of their program (early weeks = earlier stage, later weeks = further along):
-- "Get my first pull-up": Scapular Pulls → Dead Hangs → Australian/Bodyweight Rows (if a bar is available) or Towel Isometric Pulls (if floor space only) → Negative Pull-Ups.
-- "Do a full clean push-up": Wall Push-Ups → Incline Push-Ups → Knee Push-Ups → Negative Full Push-Ups → Standard Push-Ups.
-- "Hold a handstand": Wrist Mobility (Cat-Cow, Wrist Rocks) → Hollow Body Holds → Pike Hold / Elevated Pike Hold → Wall Chest-to-Wall Handstand Holds.
-- "Just get generally strong": balanced rotation across Squats, push-up regressions, Planks, and Glute Bridges.
+GOAL PIPELINE — this program runs over 4 phases (one per week). This is week ${weekNumber || 1}, which is PHASE ${phaseNum}. Pick exercises from the correct phase below for their stated goal — do not skip ahead or fall behind the phase for this week:
+
+- "Get my first pull-up":
+  Phase 1: Towel Isometric Pulls (or Dead Hangs if a bar is available) + light grip work.
+  Phase 2: Scapular Pulls, building on Phase 1.
+  Phase 3: Incline Rows or Australian Rows (if a bar/sturdy setup is available) — if only floor space, continue Scapular Pulls and Towel Isometric Pulls at increased volume instead.
+  Phase 4: Negative Pull-Ups (bar required) — if no bar is available, stay on Phase 3 exercises at increased difficulty instead, since a true negative pull-up needs a bar.
+
+- "Do a full clean push-up":
+  Phase 1: Wall Push-Ups.
+  Phase 2: Incline Push-Ups.
+  Phase 3: Knee Push-Ups and Negative Push-Ups.
+  Phase 4: Full Clean Push-Ups.
+
+- "Hold a handstand":
+  Phase 1: Wrist Mobility/Wrist Rocks + Hollow Body Holds.
+  Phase 2: Pike Holds.
+  Phase 3: Elevated Pike Holds.
+  Phase 4: Wall Walks / Chest-to-Wall Handstand Holds (needs a wall — always available regardless of equipment answer, since every home has a wall).
+
+- "Just get generally strong": balanced rotation across Squats, push-up regressions appropriate to their fitness level, Planks, and Glute Bridges throughout all 4 phases, gradually increasing volume each week.
 
 MANDATORY PREHAB INJECTION based on their limitation — add this as a warm-up before the main sets on every training day:
-- "Thin wrists / weak grip": 2 sets of Wrist Palm Pulses + Cat-Cow Stretch + Dead Hangs/Wrist Rocks before main sets.
+- "Thin wrists / weak grip": 2 sets of Wrist Palm Pulses + Cat-Cow Stretch + Wrist Rocks before main sets (use Wrist Rocks/Cat-Cow instead of Dead Hangs if no bar is available).
 - "Old injury I'm working around": reduce set intensity by roughly 20%, use 90-second rest between sets instead of 60, and add a joint-mobilization cue to the safety tip.
 - "Total beginner, nervous starting": keep exercises strictly to low-impact wall/incline variations with lower rep counts, no jumping into advanced progressions yet.
 - "No limitations": no mandatory injection needed, proceed with the standard pipeline.
 
-ENVIRONMENT ADJUSTMENT based on equipment available:
-- "Nothing — just floor space": use only floor/wall progressions — Doorframe Rows, Floor Slides, Pike Holds, wall-based work.
-- "A wall or sturdy chair": Incline Push-Ups, Chair Dips, Chair Rows, and Wall Walks become available.
-- "I have access to a bar": Bar Hangs, Incline Rows, and Negative Pull-Ups become available.`;
+ENVIRONMENT CONSTRAINT — this is a HARD RULE, not a preference:
+- "Nothing — just floor space": ABSOLUTELY NO bar-based or pull-up-bar exercises may appear anywhere in this plan — no Dead Hangs, no Negative Pull-Ups, no Bar Hangs, no Incline Rows requiring a bar. For any pulling movement, use ONLY Towel Isometric Pulls, Doorframe Rows, Scapular Pulls, or Floor Slides instead. Double-check every exercise before finalizing — if it requires a bar and they have none, replace it.
+- "A wall or sturdy chair": Incline Push-Ups, Chair Dips, Chair Rows, and Wall Walks become available (still no bar-based exercises).
+- "I have access to a bar": Dead Hangs, Bar Hangs, Incline Rows, and Negative Pull-Ups become available in addition to everything else.`;
 
   const prompt = `You are a calm, encouraging calisthenics coach for a total beginner, using real, scientifically grounded progression pipelines — not generic or randomly chosen exercises.
 Goal: ${goalLabel}
