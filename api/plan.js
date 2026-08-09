@@ -64,6 +64,7 @@ Return ONLY valid JSON, no markdown fences, no commentary, matching this exact s
   "safetyTip": "one safety tip specific to their limitation"
 }
 Include 7 days, with 1-2 rest days marked "isRestDay": true (exercises array empty on rest days). Use 2-4 exercises per training day, including any mandatory prehab injection exercises first if applicable. Only use exercises unlocked by their stated equipment. Give every exercise 2-3 short, specific form cues in the "cues" array — these are shown to the user as step-by-step instructions, so make them genuinely useful, not generic.
+LOCKED REFERENCE — if "Cat-Cow Stretch" appears anywhere in this plan, its cues MUST follow this exact order and never reverse it: Cat = round your spine UP toward the ceiling, tuck your chin, look toward your navel. Cow = drop your belly DOWN toward the floor, lift your chest and tailbone, look up toward the ceiling.
 CRITICAL: Never use the double-quote/inch symbol (") anywhere inside any text value — write "inches" in full instead of ". Never put any double-quote character inside a string value, as it will break the JSON.`;
 
   const maxAttempts = 3;
