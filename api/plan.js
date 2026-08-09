@@ -19,9 +19,9 @@ GOAL PIPELINE — this program runs over 4 phases (one per week). This is week $
 
 - "Get my first pull-up":
   Phase 1: Towel Isometric Pulls (or Dead Hangs if a bar is available) + light grip work.
-  Phase 2: Scapular Pulls, building on Phase 1.
-  Phase 3: Incline Rows or Australian Rows (if a bar/sturdy setup is available) — if only floor space, continue Scapular Pulls and Towel Isometric Pulls at increased volume instead.
-  Phase 4: Negative Pull-Ups (bar required) — if no bar is available, stay on Phase 3 exercises at increased difficulty instead, since a true negative pull-up needs a bar.
+  Phase 2: Continued Towel Isometric Pulls at higher volume (or Scapular Pulls, a dead-hang variation, if a bar is available — Scapular Pulls REQUIRES a bar, never assign it to someone with no equipment).
+  Phase 3: Doorframe Rows / Floor Slides at increased difficulty (or Incline Rows/Australian Rows if a bar/sturdy setup is available).
+  Phase 4: Continued floor work at max difficulty (or Negative Pull-Ups if a bar is available — this REQUIRES a bar, never assign it without one).
 
 - "Do a full clean push-up":
   Phase 1: Wall Push-Ups.
@@ -44,9 +44,9 @@ MANDATORY PREHAB INJECTION based on their limitation — add this as a warm-up b
 - "No limitations": no mandatory injection needed, proceed with the standard pipeline.
 
 ENVIRONMENT CONSTRAINT — this is a HARD RULE, not a preference:
-- "Nothing — just floor space": ABSOLUTELY NO bar-based or pull-up-bar exercises may appear anywhere in this plan — no Dead Hangs, no Negative Pull-Ups, no Bar Hangs, no Incline Rows requiring a bar. For any pulling movement, use ONLY Towel Isometric Pulls, Doorframe Rows, Scapular Pulls, or Floor Slides instead. Double-check every exercise before finalizing — if it requires a bar and they have none, replace it.
+- "Nothing — just floor space": ABSOLUTELY NO bar-based or pull-up-bar exercises may appear anywhere in this plan — no Dead Hangs, no Negative Pull-Ups, no Bar Hangs, no Scapular Pulls, no Incline Rows requiring a bar. Scapular Pulls specifically is a dead-hang variation performed ON A BAR — it is NOT a floor-only exercise. For any pulling movement, use ONLY Towel Isometric Pulls, Doorframe Rows, or Floor Slides instead. Double-check every exercise before finalizing — if it requires a bar and they have none, replace it.
 - "A wall or sturdy chair": Incline Push-Ups, Chair Dips, Chair Rows, and Wall Walks become available (still no bar-based exercises).
-- "I have access to a bar": Dead Hangs, Bar Hangs, Incline Rows, and Negative Pull-Ups become available in addition to everything else.`;
+- "I have access to a bar": Dead Hangs, Bar Hangs, Scapular Pulls, Incline Rows, and Negative Pull-Ups become available in addition to everything else.`;
 
   const prompt = `You are a calm, encouraging calisthenics coach for a total beginner, using real, scientifically grounded progression pipelines — not generic or randomly chosen exercises.
 Goal: ${goalLabel}
@@ -65,6 +65,11 @@ Return ONLY valid JSON, no markdown fences, no commentary, matching this exact s
 }
 Include 7 days, with 1-2 rest days marked "isRestDay": true (exercises array empty on rest days). Use 2-4 exercises per training day, including any mandatory prehab injection exercises first if applicable. Only use exercises unlocked by their stated equipment. Give every exercise 2-3 short, specific form cues in the "cues" array — these are shown to the user as step-by-step instructions, so make them genuinely useful, not generic.
 LOCKED REFERENCE — if "Cat-Cow Stretch" appears anywhere in this plan, its cues MUST follow this exact order and never reverse it: Cat = round your spine UP toward the ceiling, tuck your chin, look toward your navel. Cow = drop your belly DOWN toward the floor, lift your chest and tailbone, look up toward the ceiling.
+LOCKED REFERENCE — if "Scapular Pulls" appears anywhere in this plan, its cues MUST be exactly this (it is a bar hang exercise, never a floor exercise): "Hang from the bar with arms fully straight and shoulders relaxed in a dead hang.", "Without bending your elbows, depress and squeeze your shoulder blades down and back to lift your body slightly.", "Hold for 1-2 seconds at the top, then slowly lower back into a dead hang with full control."
+LOCKED REFERENCE — if "Dead Hang" or "Bar Hangs" appears anywhere in this plan, its cues MUST describe hanging from a bar (NEVER a floor exercise): "Jump or step up to grip the bar with hands shoulder-width apart.", "Let your body hang fully, arms straight, shoulders relaxed away from your ears.", "Keep your body still with no swinging, breathing steadily until time is up."
+LOCKED REFERENCE — if "Negative Pull-Up" appears anywhere in this plan, its cues MUST describe a bar exercise (NEVER a floor exercise): "Use a box, jump, or step to get your chin above the bar to start at the top.", "Slowly lower yourself down under control until your arms are fully straight — aim for a slow count of 3-5 seconds.", "Release, reset at the top, and repeat for each rep."
+LOCKED REFERENCE — if "Incline Rows" appears anywhere in this plan, its cues MUST describe pulling the body toward a bar/bar-height surface (NEVER a floor exercise): "Set the bar at hip height, grip it, and walk your feet forward so your body is at an incline, heels on the ground.", "Keeping your body straight, pull your chest up toward the bar, leading with your elbows.", "Lower back down with control until your arms are fully straight."
+CRITICAL: for every exercise in this plan, before writing its cues, first confirm whether it requires a bar (hanging) or is a floor/wall exercise, and make sure the cues physically match — never describe lying down for a hanging exercise, and never describe hanging for a floor exercise.
 CRITICAL: Never use the double-quote/inch symbol (") anywhere inside any text value — write "inches" in full instead of ". Never put any double-quote character inside a string value, as it will break the JSON.`;
 
   const maxAttempts = 3;
