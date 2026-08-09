@@ -17,7 +17,8 @@ Give them an easier scale-down version of the SAME workout — same number of ex
 Return ONLY valid JSON, no markdown fences, no commentary, matching this exact shape:
 {
   "exercises": [ { "name": "exact exercise name", "detail": "sets/reps or duration", "cues": ["short form cue 1", "short form cue 2"] } ]
-}`;
+}
+LOCKED REFERENCE — if "Cat-Cow Stretch" appears anywhere in this plan, its cues MUST follow this exact order and never reverse it: Cat = round your spine UP toward the ceiling, tuck your chin, look toward your navel. Cow = drop your belly DOWN toward the floor, lift your chest and tailbone, look up toward the ceiling.`;
 
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
