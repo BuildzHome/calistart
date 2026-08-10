@@ -751,28 +751,40 @@ function playBeep() {
 let restTimerInterval = null;
 let restTimerRemaining = 0;
 
-const FORM_CHECK_QUESTIONS = {
-  wallpushup: "Did you keep a straight line from head to heels?",
-  pushup: "Did your hips stay level, no sagging?",
-  plank: "Did your hips stay level, not sagging or piking?",
-  squat: "Did your knees track over your toes?",
-  wallsit: "Was your back flat against the wall throughout?",
-  deadhang: "Did you avoid swinging or kicking?",
-  negativepullup: "Did you lower slowly and under control?",
-  pullup: "Did you get your chin fully over the bar?",
-  handstand: "Did you keep your core braced the whole time?",
-  superman: "Did you lift arms and legs together?",
-  bridge: "Did you squeeze your glutes at the top?",
-  jumpingjack: "Did you land softly each time?",
+const MUSCLE_CHECKS = {
+  wallpushup: { question: "Did you feel it in your chest and triceps?", goodLabel: "Yes! 🔥", badLabel: "Felt it elsewhere", badTip: "Keep elbows tucked closer to your body, hands slightly wider than shoulders." },
+  pushup: { question: "Did you feel it in your chest, shoulders, and triceps?", goodLabel: "Yes! 🔥", badLabel: "Felt it in my back", badTip: "Squeeze your core and glutes to keep your hips from sagging." },
+  plank: { question: "Did you feel your core working, not your lower back?", goodLabel: "Yes! 🔥", badLabel: "Felt it in my back", badTip: "Tuck your hips slightly and squeeze your glutes to protect your lower back." },
+  squat: { question: "Did you feel it in your thighs and glutes?", goodLabel: "Yes! 🔥", badLabel: "Felt it in my knees", badTip: "Sit back like you're reaching for a chair, and keep weight in your heels." },
+  wallsit: { question: "Did you feel the burn in your thighs?", goodLabel: "Yes! 🔥", badLabel: "Felt it in my knees", badTip: "Slide down until knees are closer to 90°, and keep them tracking over your toes." },
+  deadhang: { question: "Did you feel a stretch through your shoulders and lats?", goodLabel: "Yes!", badLabel: "Felt it in my elbows", badTip: "Keep a slight bend in the elbows and relax your shoulders down, not shrugged up." },
+  barhangs: { question: "Did you feel a stretch through your shoulders and lats?", goodLabel: "Yes!", badLabel: "Felt it in my elbows", badTip: "Keep a slight bend in the elbows and relax your shoulders down, not shrugged up." },
+  negativepullup: { question: "Did you feel your back and biceps working?", goodLabel: "Yes! 🔥", badLabel: "Felt it in my shoulders", badTip: "Lower even more slowly and keep your shoulder blades pulled down and back." },
+  pullup: { question: "Did you feel your back and biceps working?", goodLabel: "Yes! 🔥", badLabel: "Felt it in my shoulders", badTip: "Lead with your elbows pulling down and back, not just your hands." },
+  handstand: { question: "Did you feel your shoulders and core bracing?", goodLabel: "Yes! 🔥", badLabel: "Felt shaky/unstable", badTip: "Squeeze your core and glutes tight — a braced body is a stable body." },
+  superman: { question: "Did you feel your lower back and glutes engage?", goodLabel: "Yes! 🔥", badLabel: "Didn't feel much", badTip: "Lift arms and legs a little higher and squeeze for 2 full seconds at the top." },
+  bridge: { question: "Did you feel the burn in your glutes and hamstrings?", goodLabel: "Yes! 🔥", badLabel: "Felt it in my lower back", badTip: "Try squeezing your core and not arching as high — drive through your heels instead." },
+  jumpingjack: { question: "Did that get your heart rate up?", goodLabel: "Yes!", badLabel: "Not really", badTip: "Pick up the pace slightly and use a full range of motion with your arms." },
+  scapularpulls: { question: "Did you feel your upper back and shoulder blades working?", goodLabel: "Yes! 🔥", badLabel: "Felt it in my arms", badTip: "Keep elbows straight — the movement should come from squeezing your shoulder blades, not bending your arms." },
+  hollowbodyhold: { question: "Did you feel your abs bracing, not your hip flexors?", goodLabel: "Yes! 🔥", badLabel: "Felt it in my hips", badTip: "Press your lower back into the floor and lift legs slightly higher." },
+  pikehold: { question: "Did you feel your shoulders and core working?", goodLabel: "Yes! 🔥", badLabel: "Felt it in my lower back", badTip: "Keep your hips high and core braced — don't let your back sag." },
+  chairdips: { question: "Did you feel it in your triceps?", goodLabel: "Yes! 🔥", badLabel: "Felt it in my shoulders", badTip: "Keep elbows pointing straight back, not flaring out to the sides." },
+  chairrows: { question: "Did you feel your upper back working?", goodLabel: "Yes! 🔥", badLabel: "Felt it in my arms", badTip: "Lead with your elbows and squeeze your shoulder blades at the top." },
+  wallwalks: { question: "Did you feel your shoulders and core bracing?", goodLabel: "Yes! 🔥", badLabel: "Felt shaky", badTip: "Take smaller steps and keep your core tight the whole way up." },
+  inclinerows: { question: "Did you feel your upper back working?", goodLabel: "Yes! 🔥", badLabel: "Felt it in my arms", badTip: "Lead with your elbows and squeeze your shoulder blades at the top." },
+  doorframerows: { question: "Did you feel your upper back working?", goodLabel: "Yes! 🔥", badLabel: "Felt it in my arms", badTip: "Lean back further and lead the pull with your elbows, not your hands." },
+  floorslides: { question: "Did you feel your upper back and shoulders working?", goodLabel: "Yes!", badLabel: "Didn't feel much", badTip: "Keep your lower back pressed to the floor and move slowly." },
 };
 
-function getFormCheckQuestion(name) {
+const GENERIC_MUSCLE_CHECK = { question: "Did that feel controlled and steady?", goodLabel: "Yes! 🔥", badLabel: "Not quite", badTip: "Slow the movement down and focus on your form over speed." };
+
+function getMuscleCheck(name) {
   const slug = slugify(name);
-  if (FORM_CHECK_QUESTIONS[slug]) return FORM_CHECK_QUESTIONS[slug];
-  for (const key of Object.keys(FORM_CHECK_QUESTIONS)) {
-    if (slug.includes(key)) return FORM_CHECK_QUESTIONS[key];
+  if (MUSCLE_CHECKS[slug]) return MUSCLE_CHECKS[slug];
+  for (const key of Object.keys(MUSCLE_CHECKS)) {
+    if (slug.includes(key)) return MUSCLE_CHECKS[key];
   }
-  return "Did that feel controlled and steady?";
+  return GENERIC_MUSCLE_CHECK;
 }
 
 let workoutStartTime = null;
@@ -870,6 +882,13 @@ function dismissFormCheck() {
   if (card) card.remove();
 }
 
+function showMuscleCheckTip(exerciseName) {
+  const check = getMuscleCheck(exerciseName);
+  const card = document.getElementById("form-check-card");
+  if (!card) return;
+  card.innerHTML = `<p style="font-size:13px;color:var(--gold);">💡 ${check.badTip}</p>`;
+}
+
 function startRestTimer(seconds, exerciseName) {
   clearInterval(restTimerInterval);
   const bar = document.getElementById("rest-timer-bar");
@@ -878,17 +897,17 @@ function startRestTimer(seconds, exerciseName) {
   bar.querySelector("#rest-timer-text").textContent = `Rest: ${restTimerRemaining}s`;
 
   dismissFormCheck();
-  const question = exerciseName && getFormCheckQuestion(exerciseName);
-  if (question) {
+  if (exerciseName) {
+    const check = getMuscleCheck(exerciseName);
     const card = document.createElement("div");
     card.id = "form-check-card";
     card.className = "fade-in";
     card.style.cssText = "position:fixed;bottom:64px;left:16px;right:16px;background:var(--ink);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:14px 16px;z-index:199;max-width:420px;margin:0 auto;";
     card.innerHTML = `
-      <p style="font-size:13px;color:var(--chalk);margin-bottom:10px;">${question}</p>
+      <p style="font-size:13px;color:var(--chalk);margin-bottom:10px;">${check.question}</p>
       <div style="display:flex;gap:8px;">
-        <button onclick="dismissFormCheck()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:var(--chalk);font-size:13px;cursor:pointer;">👍 Perfect</button>
-        <button onclick="dismissFormCheck()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:var(--chalk);font-size:13px;cursor:pointer;">👎 Needs work</button>
+        <button onclick="dismissFormCheck()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:var(--chalk);font-size:13px;cursor:pointer;">${check.goodLabel}</button>
+        <button onclick="showMuscleCheckTip(${JSON.stringify(exerciseName)})" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:var(--chalk);font-size:13px;cursor:pointer;">${check.badLabel}</button>
       </div>
     `;
     document.body.appendChild(card);
