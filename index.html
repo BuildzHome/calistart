@@ -48,6 +48,9 @@
   .spinner { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.15); border-top-color: var(--gold); border-radius: 50%; margin: 0 auto 20px; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes shimmer { 0% { background-position: -300px 0; } 100% { background-position: 300px 0; } }
+  .skeleton-line, .skeleton-card { background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 37%, rgba(255,255,255,0.04) 63%); background-size: 600px 100%; animation: shimmer 1.4s linear infinite; border-radius: 8px; }
+  .skeleton-card { height: 78px; margin-bottom: 12px; }
   .faq-item { border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; margin-bottom: 8px; overflow: hidden; background: rgba(255,255,255,0.02); }
   .faq-item summary { padding: 13px 16px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; color: var(--chalk); list-style: none; display: flex; justify-content: space-between; align-items: center; }
   .faq-item summary::-webkit-details-marker { display: none; }
@@ -131,9 +134,13 @@
   </div>
 
   <!-- LOADING -->
-  <div class="screen center" id="screen-loading" style="padding-top:120px;">
-    <div class="spinner"></div>
-    <p style="color:var(--concrete);font-size:14px;">Building your plan…</p>
+  <div class="screen" id="screen-loading" style="padding-top:20px;">
+    <div class="eyebrow">BUILDING YOUR PLAN</div>
+    <div class="skeleton-line" style="width:90%;height:14px;margin-bottom:8px;"></div>
+    <div class="skeleton-line" style="width:70%;height:14px;margin-bottom:24px;"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
   </div>
 
   <!-- PLAN -->
