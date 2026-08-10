@@ -158,6 +158,10 @@
     </div>
 
     <div id="faq-section" style="margin-top:28px;"></div>
+
+    <div style="text-align:center;margin-top:24px;">
+      <button onclick="confirmStartNewPlan()" style="background:none;border:none;color:var(--concrete);font-size:12.5px;text-decoration:underline;cursor:pointer;padding:8px;">Start New Plan</button>
+    </div>
   </div>
 
 </div>
@@ -506,6 +510,33 @@ async function getMaintenanceWeek() {
 }
 
 initAuth();
+
+function confirmStartNewPlan() {
+  const container = document.getElementById("detail-overlay-container");
+  container.innerHTML = `
+    <div class="detail-overlay" onclick="closeExerciseDetail(event)">
+      <div class="detail-card fade-in" onclick="event.stopPropagation()">
+        <button class="detail-close" onclick="closeExerciseDetail()">✕</button>
+        <div class="detail-name" style="margin-top:10px;">Start a new plan?</div>
+        <p style="color:var(--concrete);font-size:13.5px;margin-bottom:20px;">This clears your current plan and progress so you can pick new goals. Your payment/trial status stays exactly as it is — you won't be charged again or lose access.</p>
+        <button class="btn-primary" onclick="startNewPlan()">Yes, start fresh</button>
+        <button class="btn-outline" style="margin-top:10px;" onclick="closeExerciseDetail()">Cancel</button>
+      </div>
+    </div>
+  `;
+}
+
+async function startNewPlan() {
+  closeExerciseDetail();
+  await supabaseClient.from("profiles").update({ plan: null }).eq("id", currentUser.id);
+  currentProfile = { ...currentProfile, plan: null };
+  state = { goal: null, limitation: null, equipment: null, plan: null };
+  document.querySelectorAll(".choice.selected").forEach(el => el.classList.remove("selected"));
+  document.getElementById("btn-intake1-next").disabled = true;
+  document.getElementById("btn-intake2-next").disabled = true;
+  document.getElementById("btn-get-plan").disabled = true;
+  goTo("intake1");
+}
 
 function goTo(name) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
@@ -954,7 +985,7 @@ function renderPlan(planData) {
         if (!ex.setsDone) ex.setsDone = Array(parseSetCount(ex.detail)).fill(false);
         const iconUrl = getImageForExercise(ex.name);
         const iconBlock = (ex.isScaled || !iconUrl) ? "" : `<div class="exercise-icon">${exerciseImageHTML(ex.name, 56)}</div>`;
-        html += `<div class="exercise-row fade-in" onclick='openExerciseDetail(${JSON.stringify(ex.name)}, ${JSON.stringify(ex.detail)}, ${JSON.stringify(ex.cues || [])}, ${!!ex.isScaled})'>
+        html += `<div class="exercise-row fade-in" data-day-index="${i}" data-ex-index="${exIndex}">
           ${iconBlock}
           <div style="flex:1;">
             <div class="exercise-name">${ex.name}</div>
@@ -973,6 +1004,16 @@ function renderPlan(planData) {
       html += `<button class="btn-outline" style="margin-top:6px;margin-bottom:0;" onclick="openPassFail(${i})">Mark ${d.day} complete</button>`;
     }
     card.innerHTML = html;
+
+    if (!isRestDay) {
+      card.querySelectorAll(".exercise-row").forEach(row => {
+        const exIndex = parseInt(row.dataset.exIndex, 10);
+        const ex = d.exercises[exIndex];
+        row.addEventListener("click", () => {
+          openExerciseDetail(ex.name, ex.detail, ex.cues || [], !!ex.isScaled);
+        });
+      });
+    }
     daysEl.appendChild(card);
   });
 
