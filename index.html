@@ -338,7 +338,14 @@ async function initAuth() {
   updateLandingCTA();
 
   const params = new URLSearchParams(window.location.search);
-  if (params.get("success") === "true") {
+  const justPaid = params.get("success") === "true";
+
+  if (currentUser && currentProfile && currentProfile.plan && currentProfile.plan.weeks && !justPaid) {
+    renderPlan(currentProfile.plan);
+    goTo("plan");
+  }
+
+  if (justPaid) {
     document.getElementById("payment-status").innerHTML =
       `<p style="color:var(--gold);font-size:13px;margin-bottom:10px;">Payment received — confirming your subscription…</p>`;
     setTimeout(async () => {
@@ -347,6 +354,10 @@ async function initAuth() {
       document.getElementById("payment-status").innerHTML = currentProfile.subscribed
         ? `<p style="color:var(--gold);font-size:13px;margin-bottom:10px;">Full roadmap unlocked. Welcome in.</p>`
         : `<p style="color:var(--concrete);font-size:13px;margin-bottom:10px;">Still confirming — refresh in a moment if this doesn't update.</p>`;
+      if (currentProfile.plan && currentProfile.plan.weeks) {
+        renderPlan(currentProfile.plan);
+        goTo("plan");
+      }
     }, 2500);
   }
 }
@@ -877,16 +888,30 @@ async function saveAndExitWorkout(dayIndex) {
   openPassFail(dayIndex);
 }
 
+let currentFormCheckExercise = null;
+let formCheckAutoDismiss = null;
+
 function dismissFormCheck() {
+  clearTimeout(formCheckAutoDismiss);
   const card = document.getElementById("form-check-card");
   if (card) card.remove();
 }
 
-function showMuscleCheckTip(exerciseName) {
-  const check = getMuscleCheck(exerciseName);
+function handleGoodFormTap() {
   const card = document.getElementById("form-check-card");
   if (!card) return;
-  card.innerHTML = `<p style="font-size:13px;color:var(--gold);">💡 ${check.badTip}</p>`;
+  card.innerHTML = `<p style="font-size:13.5px;color:var(--gold);text-align:center;">🎉 Great work! Keep it up!</p>`;
+  clearTimeout(formCheckAutoDismiss);
+  formCheckAutoDismiss = setTimeout(dismissFormCheck, 2000);
+}
+
+function handleBadFormTap() {
+  const check = getMuscleCheck(currentFormCheckExercise);
+  const card = document.getElementById("form-check-card");
+  if (!card) return;
+  card.innerHTML = `<p style="font-size:13px;color:var(--gold);">💡 Form Tip: ${check.badTip}</p>`;
+  clearTimeout(formCheckAutoDismiss);
+  formCheckAutoDismiss = setTimeout(dismissFormCheck, 4000);
 }
 
 function startRestTimer(seconds, exerciseName) {
@@ -897,6 +922,7 @@ function startRestTimer(seconds, exerciseName) {
   bar.querySelector("#rest-timer-text").textContent = `Rest: ${restTimerRemaining}s`;
 
   dismissFormCheck();
+  currentFormCheckExercise = exerciseName;
   if (exerciseName) {
     const check = getMuscleCheck(exerciseName);
     const card = document.createElement("div");
@@ -906,8 +932,8 @@ function startRestTimer(seconds, exerciseName) {
     card.innerHTML = `
       <p style="font-size:13px;color:var(--chalk);margin-bottom:10px;">${check.question}</p>
       <div style="display:flex;gap:8px;">
-        <button onclick="dismissFormCheck()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:var(--chalk);font-size:13px;cursor:pointer;">${check.goodLabel}</button>
-        <button onclick="showMuscleCheckTip(${JSON.stringify(exerciseName)})" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:var(--chalk);font-size:13px;cursor:pointer;">${check.badLabel}</button>
+        <button onclick="handleGoodFormTap()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:var(--chalk);font-size:13px;cursor:pointer;">${check.goodLabel}</button>
+        <button onclick="handleBadFormTap()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:var(--chalk);font-size:13px;cursor:pointer;">${check.badLabel}</button>
       </div>
     `;
     document.body.appendChild(card);
