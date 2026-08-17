@@ -270,13 +270,21 @@ function slugify(name) {
   return (name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
+function findBestMatchKey(slug, dict) {
+  if (dict[slug]) return slug;
+  let best = null;
+  for (const key of Object.keys(dict)) {
+    if (slug.includes(key) && (!best || key.length > best.length)) {
+      best = key;
+    }
+  }
+  return best;
+}
+
 function getImageForExercise(name) {
   const slug = slugify(name);
-  if (EXERCISE_IMAGES[slug]) return EXERCISE_IMAGES[slug];
-  for (const key of Object.keys(EXERCISE_IMAGES)) {
-    if (slug.includes(key)) return EXERCISE_IMAGES[key];
-  }
-  return null;
+  const key = findBestMatchKey(slug, EXERCISE_IMAGES);
+  return key ? EXERCISE_IMAGES[key] : null;
 }
 
 function exerciseImageHTML(name, size) {
@@ -616,11 +624,8 @@ const EXERCISE_TIPS_FALLBACK = {
 function getTipsForExercise(name, liveCues) {
   if (liveCues && liveCues.length) return liveCues;
   const slug = slugify(name);
-  if (EXERCISE_TIPS_FALLBACK[slug]) return EXERCISE_TIPS_FALLBACK[slug];
-  for (const key of Object.keys(EXERCISE_TIPS_FALLBACK)) {
-    if (slug.includes(key)) return EXERCISE_TIPS_FALLBACK[key];
-  }
-  return [];
+  const key = findBestMatchKey(slug, EXERCISE_TIPS_FALLBACK);
+  return key ? EXERCISE_TIPS_FALLBACK[key] : [];
 }
 
 function openExerciseDetail(name, detail, cues, isScaled) {
@@ -792,11 +797,8 @@ const GENERIC_MUSCLE_CHECK = { question: "Did that feel controlled and steady?",
 
 function getMuscleCheck(name) {
   const slug = slugify(name);
-  if (MUSCLE_CHECKS[slug]) return MUSCLE_CHECKS[slug];
-  for (const key of Object.keys(MUSCLE_CHECKS)) {
-    if (slug.includes(key)) return MUSCLE_CHECKS[key];
-  }
-  return GENERIC_MUSCLE_CHECK;
+  const key = findBestMatchKey(slug, MUSCLE_CHECKS);
+  return key ? MUSCLE_CHECKS[key] : GENERIC_MUSCLE_CHECK;
 }
 
 let workoutStartTime = null;
